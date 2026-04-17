@@ -10,8 +10,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
         :root {
-            --primary: #008f39; /* Empieza neutral o Colegio */
-            --glass: rgba(10, 10, 15, 0.7);
+            --primary: #008f39; 
+            --glass: rgba(10, 10, 15, 0.65); 
         }
 
         body { 
@@ -21,34 +21,36 @@
             overflow: hidden; 
             margin: 0; 
             touch-action: manipulation; 
+            -webkit-tap-highlight-color: transparent; 
         }
 
         .cyber-font { font-family: 'Orbitron', sans-serif; }
         
-        /* SLIDERS TÁCTICOS */
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 10; }
+        /* SLIDERS ULTRA FINOS */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 20; }
         input[type=range]::-webkit-slider-thumb { 
-            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
             background: var(--primary); cursor: pointer; border: 2px solid #000;
-            box-shadow: 0 0 10px var(--primary); margin-top: -6px; transition: 0.2s;
+            box-shadow: 0 0 8px var(--primary); margin-top: -6px; transition: transform 0.2s;
         }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 1px; }
 
         /* LAYOUT CORE */
         #webgl-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
         canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
         
-        .ui-layer { position: absolute; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: space-between; height: 100%; pointer-events: none; }
-        .pointer-events-auto { pointer-events: auto; }
+        .ui-layer { position: absolute; bottom: 0; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; pointer-events: none; padding-bottom: 25px;}
+        .pointer-events-auto { pointer-events: auto !important; }
 
-        /* BRANDING FIJO (No sale en el renderizado final del Canvas) */
+        /* BRANDING FIJO */
         #watermark {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             text-align: center; z-index: 50; width: 100%; text-shadow: 0 2px 10px rgba(0,0,0,0.9);
             pointer-events: none;
         }
-        #watermark h1 { font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 2px; transition: color 0.3s;}
-        #watermark p { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #fff; opacity: 0.9;}
+        #watermark h1 { font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; color: var(--primary); margin-bottom: 2px; transition: color 0.3s;}
+        #watermark p { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.8);}
 
         /* INICIALIZADOR DE PERMISOS */
         #start-screen {
@@ -58,53 +60,87 @@
             backdrop-filter: blur(10px); padding: 20px; pointer-events: auto; transition: opacity 0.4s;
         }
 
-        /* BOTONES DE TRIBU TÁCTICOS (In-Game) */
-        .tribe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-        .tribe-btn {
-            background: rgba(0,0,0,0.6); border: 1px solid #333; border-radius: 8px;
-            font-size: 10px; font-weight: 900; cursor: pointer; color: #888;
-            text-transform: uppercase; padding: 10px 0; transition: 0.2s;
+        /* PANEL INFERIOR COMPACTO */
+        .sgx-panel { 
+            background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; 
+            padding: 16px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
-        .tribe-btn.active-uprm { border-color: #008f39; color: #008f39; box-shadow: inset 0 0 10px rgba(0,143,57,0.3); }
-        .tribe-btn.active-inter { border-color: #FDCC0D; color: #FDCC0D; box-shadow: inset 0 0 10px rgba(253,204,13,0.3); }
-        .tribe-btn.active-iupi { border-color: #cc0000; color: #cc0000; box-shadow: inset 0 0 10px rgba(204,0,0,0.3); }
-        .tribe-btn.active-sagrado { border-color: #ff007f; color: #ff007f; box-shadow: inset 0 0 10px rgba(255,0,127,0.3); }
 
-        .sgx-panel { background: rgba(5, 5, 8, 0.85); backdrop-filter: blur(10px); border: 1px solid #222; }
+        /* BOTONES DE TRIBU "PILLS" */
+        .tribe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 15px; }
+        .tribe-btn {
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+            font-size: 9px; font-weight: 800; cursor: pointer; color: #888;
+            text-transform: uppercase; padding: 8px 0; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tribe-btn.active-uprm { border-color: #008f39; color: #008f39; background: rgba(0,143,57,0.1); box-shadow: 0 0 10px rgba(0,143,57,0.2); }
+        .tribe-btn.active-inter { border-color: #FDCC0D; color: #FDCC0D; background: rgba(253,204,13,0.1); box-shadow: 0 0 10px rgba(253,204,13,0.2); }
+        .tribe-btn.active-iupi { border-color: #cc0000; color: #cc0000; background: rgba(204,0,0,0.1); box-shadow: 0 0 10px rgba(204,0,0,0.2); }
+        .tribe-btn.active-sagrado { border-color: #ff007f; color: #ff007f; background: rgba(255,0,127,0.1); box-shadow: 0 0 10px rgba(255,0,127,0.2); }
+
+        /* BOTONES DE CÁMARA CIRCULARES */
+        .cam-controls { display: flex; justify-content: space-evenly; align-items: center; margin-top: 10px; }
+        
+        .circle-btn {
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; cursor: pointer; transition: transform 0.15s ease, background 0.3s ease;
+            outline: none; -webkit-tap-highlight-color: transparent;
+        }
+        .circle-btn:active { transform: scale(0.9); }
+        
+        #btn-flip {
+            width: 44px; height: 44px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff;
+        }
+        
+        #btn-photo {
+            width: 64px; height: 64px; background: #fff; border: 4px solid rgba(255,255,255,0.3); background-clip: padding-box;
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+        }
+        
+        #btn-record {
+            width: 54px; height: 54px; background: transparent; border: 3px solid var(--primary); color: var(--primary);
+            position: relative;
+        }
+        #btn-record .rec-icon {
+            width: 16px; height: 16px; background: var(--primary); border-radius: 50%; transition: all 0.3s ease;
+        }
+        #btn-record.recording .rec-icon {
+            width: 14px; height: 14px; border-radius: 4px; background: #ff0055; 
+        }
+        #btn-record.recording { border-color: #ff0055; box-shadow: 0 0 15px rgba(255,0,85,0.4); }
 
         /* RECORDING INDICATOR */
-        #rec-indicator { display: none; position: absolute; top: 20px; right: 20px; width: 12px; height: 12px; background: red; border-radius: 50%; box-shadow: 0 0 10px red; animation: pulse 1s infinite; z-index: 50; }
+        #rec-indicator { display: none; position: absolute; top: 25px; right: 25px; width: 10px; height: 10px; background: #ff0055; border-radius: 50%; box-shadow: 0 0 10px #ff0055; animation: pulse 1s infinite; z-index: 50; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
     <div id="webgl-container">
-        <video id="camera-feed" class="hidden" autoplay playsinline muted></video>
-        <canvas id="texture-canvas" class="hidden"></canvas>
+        <video id="camera-feed" style="display: none;" autoplay playsinline muted></video>
+        <canvas id="texture-canvas" style="display: none;"></canvas>
     </div>
 
     <div id="start-screen">
-        <h1 class="cyber-font text-3xl text-center text-white mb-2">SGX STORY AR</h1>
+        <h1 class="cyber-font text-3xl text-center text-white mb-2 drop-shadow-lg">SGX STORY AR</h1>
         <p class="text-xs text-gray-400 text-center mb-8 tracking-widest uppercase">FILTRO DE IDENTIDAD TRIBAL</p>
-        <button id="btn-init" class="w-full max-w-xs bg-white text-black font-black py-4 rounded-xl uppercase tracking-widest hover:bg-gray-200 transition-colors">
+        <button id="btn-init" class="w-full max-w-xs bg-white text-black font-black py-4 rounded-full uppercase tracking-widest hover:bg-gray-200 transition-transform active:scale-95">
             ACTIVAR CÁMARA
         </button>
-        <p class="text-[9px] text-gray-600 mt-4 text-center">Requieres otorgar permisos de cámara para continuar.</p>
+        <p class="text-[9px] text-gray-500 mt-6 text-center uppercase tracking-widest">Requiere acceso a la cámara</p>
     </div>
 
-    <div id="watermark" class="hidden">
+    <div id="watermark" style="display: none;">
         <h1 id="tribe-label" class="cyber-font">SANGRE COLEGIO</h1>
-        <p>SGX JUSTAS CHALLENGE | Spatialgineers x Somos Mayagüez</p>
+        <p>Spatialgineers x Somos Mayagüez</p>
     </div>
 
     <div id="rec-indicator"></div>
 
-    <div id="controls-ui" class="ui-layer pb-6 pt-10 px-4 md:px-6 hidden">
+    <div id="controls-ui" class="ui-layer px-4" style="display: none;">
         
-        <div class="flex justify-between items-start"></div>
-
-        <div class="pointer-events-auto sgx-panel rounded-xl p-4 flex flex-col gap-2 max-w-md mx-auto w-full shadow-2xl">
+        <div class="pointer-events-auto sgx-panel max-w-sm mx-auto w-full">
             
             <div class="tribe-grid">
                 <button class="tribe-btn" id="btn-uprm" onclick="swapTribe('UPRM', '#008f39')">UPRM</button>
@@ -113,33 +149,37 @@
                 <button class="tribe-btn" id="btn-sagrado" onclick="swapTribe('Sagrado', '#ff007f')">SAGR</button>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 border-b border-gray-800 pb-4 mb-2">
+            <div class="grid grid-cols-2 gap-6 pb-2 mb-2 px-2">
                 <div>
-                    <div class="flex justify-between text-[9px] font-bold text-gray-400 mb-2"><label>TINT INTENSITY</label></div>
+                    <div class="flex justify-between text-[8px] font-bold text-gray-400 mb-1 tracking-wider"><label>TINT</label></div>
                     <input type="range" id="sl-int" min="0" max="1" step="0.05" value="0.8">
                 </div>
                 <div>
-                    <div class="flex justify-between text-[9px] font-bold text-gray-400 mb-2"><label>HOLO GRID</label></div>
+                    <div class="flex justify-between text-[8px] font-bold text-gray-400 mb-1 tracking-wider"><label>GRID</label></div>
                     <input type="range" id="sl-scale" min="0.0" max="1" step="0.05" value="0.5">
                 </div>
             </div>
 
-            <div class="flex gap-2">
-                <button id="btn-flip" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-[11px] font-bold py-3 rounded tracking-widest transition-colors border border-gray-700 uppercase">
-                    ⟲ FLIP
+            <div class="cam-controls">
+                <button id="btn-flip" class="circle-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 16V14a2 2 0 0 0-2-2h-8"></path>
+                        <path d="M14 16l-4-4 4-4"></path>
+                        <path d="M4 8v2a2 2 0 0 0 2 2h8"></path>
+                        <path d="M10 8l4 4-4 4"></path>
+                    </svg>
                 </button>
-                <button id="btn-photo" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-[11px] font-bold py-3 rounded tracking-widest transition-colors border border-gray-700">
-                    📸 FOTO
-                </button>
-                <button id="btn-record" class="flex-1 text-black text-[11px] font-bold py-3 rounded tracking-widest transition-colors uppercase" style="background-color: var(--primary); transition: background-color 0.3s;">
-                    ⏺ GRABAR
+
+                <button id="btn-photo" class="circle-btn"></button>
+
+                <button id="btn-record" class="circle-btn">
+                    <div class="rec-icon"></div> 
                 </button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- CORE DOM ---
         const video = document.getElementById('camera-feed');
         const texCanvas = document.getElementById('texture-canvas');
         const texCtx = texCanvas.getContext('2d', { willReadFrequently: true });
@@ -153,7 +193,6 @@
             return result ? { r: parseInt(result[1], 16)/255, g: parseInt(result[2], 16)/255, b: parseInt(result[3], 16)/255 } : { r:1, g:1, b:1 };
         }
 
-        // --- UBERSHADER SETUP ---
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
         const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
@@ -241,15 +280,15 @@
 
         scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shaderMat));
 
-        // --- INICIALIZADOR DE CÁMARA (Lógica Base Restaurada) ---
         let currentStream = null;
 
+        // INICIALIZACIÓN DE CÁMARA (Event Handler del Botón)
         document.getElementById('btn-init').addEventListener('click', () => {
             document.getElementById('btn-init').innerText = "CONECTANDO...";
-            startCamera(); // Ejecución directa
+            startCamera(true); // Pasamos 'true' para indicar que es el arranque inicial
         });
 
-        async function startCamera() {
+        async function startCamera(isInitialBoot = false) {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
             }
@@ -262,7 +301,9 @@
                 
                 currentStream = stream;
                 video.srcObject = stream;
-                await video.play();
+                
+                // MATA LA FRICCIÓN ASÍNCRONA: Ejecuta el play sin congelar el hilo principal
+                video.play().catch(e => console.warn("Video play info:", e));
                 
                 video.onloadedmetadata = () => {
                     texCanvas.width = video.videoWidth;
@@ -273,23 +314,24 @@
                     
                     if (!isStreamActive) {
                         isStreamActive = true;
-                        
-                        // TRANSICIÓN SEGURA: El UI no se levanta hasta que la cámara confirma vida
+                        drawFrame();
+                    }
+
+                    // SOLO DESTRUYE LA PANTALLA SI ES EL BOOT INICIAL
+                    if (isInitialBoot) {
                         document.getElementById('start-screen').style.opacity = '0';
                         setTimeout(() => {
-                            document.getElementById('start-screen').classList.add('hidden');
-                            document.getElementById('controls-ui').classList.remove('hidden');
-                            document.getElementById('watermark').classList.remove('hidden');
+                            document.getElementById('start-screen').style.display = 'none';
                             
-                            // Iniciar con UPRM por default para que no esté vacío
+                            document.getElementById('controls-ui').style.display = 'flex';
+                            document.getElementById('watermark').style.display = 'block';
+                            
                             swapTribe('UPRM', '#008f39');
                         }, 400);
-
-                        drawFrame();
                     }
                 };
             } catch (err) {
-                console.error("Camera access denied", err);
+                console.error(err);
                 alert("Error al acceder a la cámara. Asegúrate de dar los permisos correspondientes.");
                 document.getElementById('btn-init').innerText = "REINTENTAR";
             }
@@ -307,19 +349,15 @@
             renderer.render(scene, camera);
         }
 
-        // --- HOT-SWAP DE TRIBUS (Cero recargas de cámara) ---
         function swapTribe(id, hexColor) {
-            // Variables CSS y Branding
             document.documentElement.style.setProperty('--primary', hexColor);
             document.getElementById('tribe-label').innerText = "SANGRE " + id.toUpperCase();
             
-            // Shader Color
             const c = hexToRgb(hexColor);
             shaderMat.uniforms.u_tint_color.value.set(c.r, c.g, c.b);
 
-            // Botones Táctiles Activos
             document.querySelectorAll('.tribe-btn').forEach(btn => {
-                btn.className = "tribe-btn"; // Reset base
+                btn.className = "tribe-btn"; 
             });
             document.getElementById('btn-' + id.toLowerCase()).classList.add('active-' + id.toLowerCase());
         }
@@ -327,7 +365,7 @@
         // --- CONTROLES Y CAPTURA ---
         document.getElementById('btn-flip').addEventListener('click', () => {
             currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-            startCamera(); // Aquí sí reiniciamos la cámara para voltearla
+            startCamera(false); // Pasamos 'false' porque el UI ya está activo
         });
 
         document.getElementById('sl-int').addEventListener('input', (e) => shaderMat.uniforms.u_intensity.value = parseFloat(e.target.value));
@@ -342,6 +380,7 @@
             a.download = `SGX_Sangre_${Date.now()}.jpg`;
             a.click();
             
+            // Flash Effect
             const flash = document.createElement('div');
             flash.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;z-index:9999;transition:opacity 0.3s;opacity:1;pointer-events:none;';
             document.body.appendChild(flash);
@@ -349,7 +388,7 @@
             setTimeout(() => document.body.removeChild(flash), 350);
         });
 
-        // GRABACIÓN DE VIDEO NATIVA (Excluye UI HTML)
+        // GRABACIÓN DE VIDEO 
         let mediaRecorder;
         let recordedChunks = [];
         const btnRecord = document.getElementById('btn-record');
@@ -357,10 +396,7 @@
         btnRecord.addEventListener('click', () => {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
-                btnRecord.textContent = '⏺ GRABAR';
-                btnRecord.classList.remove('bg-red-600', 'text-white', 'animate-pulse');
-                btnRecord.style.backgroundColor = "var(--primary)";
-                btnRecord.style.color = "black";
+                btnRecord.classList.remove('recording'); 
                 document.getElementById('rec-indicator').style.display = 'none';
                 return;
             }
@@ -390,9 +426,7 @@
 
             mediaRecorder.start();
             
-            btnRecord.textContent = '⏹ DETENER';
-            btnRecord.style.backgroundColor = ""; 
-            btnRecord.classList.add('bg-red-600', 'text-white', 'animate-pulse');
+            btnRecord.classList.add('recording'); 
             document.getElementById('rec-indicator').style.display = 'block';
         });
 
