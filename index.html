@@ -10,12 +10,12 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
         :root {
-            --primary: #008f39; /* Verde SGX/Colegio */
-            --glass: rgba(10, 10, 15, 0.85);
+            --primary: #008f39; /* Empieza neutral o Colegio */
+            --glass: rgba(10, 10, 15, 0.7);
         }
 
         body { 
-            background-color: #050505; 
+            background-color: #000; 
             color: #fff; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             overflow: hidden; 
@@ -25,57 +25,56 @@
 
         .cyber-font { font-family: 'Orbitron', sans-serif; }
         
-        /* Tactical Sliders */
-        input[type=range] { 
-            -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 10;
-        }
+        /* SLIDERS TÁCTICOS */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 10; }
         input[type=range]::-webkit-slider-thumb { 
-            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%;
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
             background: var(--primary); cursor: pointer; border: 2px solid #000;
-            box-shadow: 0 0 10px var(--primary); margin-top: -7px;
+            box-shadow: 0 0 10px var(--primary); margin-top: -6px; transition: 0.2s;
         }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px;
-        }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; }
 
-        /* Layout & Overlays */
+        /* LAYOUT CORE */
         #webgl-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
         canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
         
         .ui-layer { position: absolute; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: space-between; height: 100%; pointer-events: none; }
         .pointer-events-auto { pointer-events: auto; }
 
-        /* BRANDING FIJO */
+        /* BRANDING FIJO (HTML: No sale en el renderizado final del Canvas) */
         #watermark {
-            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             text-align: center; z-index: 50; width: 100%; text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+            pointer-events: none;
         }
-        #watermark h1 { font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 2px;}
-        #watermark p { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #fff; opacity: 0.8;}
+        #watermark h1 { font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 2px; transition: color 0.3s;}
+        #watermark p { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #fff; opacity: 0.9;}
 
-        /* TRIBE SELECTOR OVERLAY */
-        #tribe-selector {
+        /* INICIALIZADOR DE PERMISOS */
+        #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--glass); z-index: 1000;
+            background: rgba(5,5,5,0.95); z-index: 1000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            backdrop-filter: blur(15px); padding: 20px;
-            pointer-events: auto;
+            backdrop-filter: blur(10px); padding: 20px; pointer-events: auto; transition: opacity 0.4s;
         }
-        
-        .uni-btn {
-            width: 100%; max-width: 320px; padding: 18px; margin-bottom: 15px;
-            background: rgba(0,0,0,0.6); border: 2px solid; border-radius: 12px;
-            font-size: 16px; font-weight: 900; cursor: pointer; color: white;
-            text-transform: uppercase; letter-spacing: 1.5px; transition: 0.2s;
-            backdrop-filter: blur(5px);
+
+        /* BOTONES DE TRIBU TÁCTICOS (In-Game) */
+        .tribe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+        .tribe-btn {
+            background: rgba(0,0,0,0.6); border: 1px solid #333; border-radius: 8px;
+            font-size: 10px; font-weight: 900; cursor: pointer; color: #888;
+            text-transform: uppercase; padding: 10px 0; transition: 0.2s;
         }
-        .uni-btn:active { transform: scale(0.96); }
-        .uni-uprm { border-color: #008f39; box-shadow: 0 0 15px rgba(0,143,57,0.3); } 
-        .uni-inter { border-color: #FDCC0D; box-shadow: 0 0 15px rgba(253,204,13,0.3); } 
-        .uni-iupi { border-color: #cc0000; box-shadow: 0 0 15px rgba(204,0,0,0.3); } 
-        .uni-sagrado { border-color: #ff007f; box-shadow: 0 0 15px rgba(255,0,127,0.3); } 
+        .tribe-btn.active-uprm { border-color: #008f39; color: #008f39; box-shadow: inset 0 0 10px rgba(0,143,57,0.3); }
+        .tribe-btn.active-inter { border-color: #FDCC0D; color: #FDCC0D; box-shadow: inset 0 0 10px rgba(253,204,13,0.3); }
+        .tribe-btn.active-iupi { border-color: #cc0000; color: #cc0000; box-shadow: inset 0 0 10px rgba(204,0,0,0.3); }
+        .tribe-btn.active-sagrado { border-color: #ff007f; color: #ff007f; box-shadow: inset 0 0 10px rgba(255,0,127,0.3); }
 
         .sgx-panel { background: rgba(5, 5, 8, 0.85); backdrop-filter: blur(10px); border: 1px solid #222; }
+
+        /* RECORDING INDICATOR */
+        #rec-indicator { display: none; position: absolute; top: 20px; right: 20px; width: 12px; height: 12px; background: red; border-radius: 50%; box-shadow: 0 0 10px red; animation: pulse 1s infinite; z-index: 50; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -85,35 +84,42 @@
         <canvas id="texture-canvas" class="hidden"></canvas>
     </div>
 
-    <div id="watermark">
-        <h1 id="tribe-label" class="cyber-font">FILTRO DE SANGRE</h1>
+    <div id="start-screen">
+        <h1 class="cyber-font text-3xl text-center text-white mb-2">SGX STORY AR</h1>
+        <p class="text-xs text-gray-400 text-center mb-8 tracking-widest uppercase">FILTRO DE IDENTIDAD TRIBAL</p>
+        <button id="btn-init" class="w-full max-w-xs bg-white text-black font-black py-4 rounded-xl uppercase tracking-widest hover:bg-gray-200 transition-colors">
+            ACTIVAR CÁMARA
+        </button>
+        <p class="text-[9px] text-gray-600 mt-4 text-center">Requieres otorgar permisos de cámara para continuar.</p>
+    </div>
+
+    <div id="watermark" class="hidden">
+        <h1 id="tribe-label" class="cyber-font">SANGRE COLEGIO</h1>
         <p>SGX JUSTAS CHALLENGE | Spatialgineers x Somos Mayagüez</p>
     </div>
 
-    <div id="tribe-selector">
-        <h1 class="cyber-font text-2xl text-center text-white mb-2 shadow-black">Identidad Visual AR</h1>
-        <p class="text-xs text-gray-400 text-center mb-8 tracking-widest uppercase">Selecciona tu tribu para aplicar filtro</p>
-        
-        <button class="uni-btn uni-uprm" onclick="initFilter('Colegio', '#008f39')">Colegio (UPRM)</button>
-        <button class="uni-btn uni-inter" onclick="initFilter('Interamericana', '#FDCC0D')">Interamericana</button>
-        <button class="uni-btn uni-iupi" onclick="initFilter('La Iupi', '#cc0000')">La Iupi (UPRRP)</button>
-        <button class="uni-btn uni-sagrado" onclick="initFilter('Sagrado', '#ff007f')">Sagrado</button>
-    </div>
+    <div id="rec-indicator"></div>
 
     <div id="controls-ui" class="ui-layer pb-6 pt-10 px-4 md:px-6 hidden">
         
-        <div class="flex justify-between items-start">
+        <div class="flex justify-between items-start"></div>
+
+        <div class="pointer-events-auto sgx-panel rounded-xl p-4 flex flex-col gap-2 max-w-md mx-auto w-full shadow-2xl">
+            
+            <div class="tribe-grid">
+                <button class="tribe-btn" id="btn-uprm" onclick="swapTribe('UPRM', '#008f39')">UPRM</button>
+                <button class="tribe-btn" id="btn-inter" onclick="swapTribe('Inter', '#FDCC0D')">INTER</button>
+                <button class="tribe-btn" id="btn-iupi" onclick="swapTribe('Iupi', '#cc0000')">IUPI</button>
+                <button class="tribe-btn" id="btn-sagrado" onclick="swapTribe('Sagrado', '#ff007f')">SAGR</button>
             </div>
 
-        <div class="pointer-events-auto sgx-panel rounded-xl p-4 flex flex-col gap-3 max-w-md mx-auto w-full shadow-2xl">
-            
-            <div class="grid grid-cols-2 gap-4 border-b border-gray-800 pb-4 mb-2 mt-2">
+            <div class="grid grid-cols-2 gap-4 border-b border-gray-800 pb-4 mb-2">
                 <div>
-                    <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-2"><label>TINT INTENSITY</label></div>
+                    <div class="flex justify-between text-[9px] font-bold text-gray-400 mb-2"><label>TINT INTENSITY</label></div>
                     <input type="range" id="sl-int" min="0" max="1" step="0.05" value="0.8">
                 </div>
                 <div>
-                    <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-2"><label>HOLO GRID</label></div>
+                    <div class="flex justify-between text-[9px] font-bold text-gray-400 mb-2"><label>HOLO GRID</label></div>
                     <input type="range" id="sl-scale" min="0.0" max="1" step="0.05" value="0.5">
                 </div>
             </div>
@@ -125,41 +131,29 @@
                 <button id="btn-photo" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-[11px] font-bold py-3 rounded tracking-widest transition-colors border border-gray-700">
                     📸 FOTO
                 </button>
-                <button id="btn-record" class="flex-1 text-black text-[11px] font-bold py-3 rounded tracking-widest transition-colors uppercase" style="background-color: var(--primary);">
+                <button id="btn-record" class="flex-1 text-black text-[11px] font-bold py-3 rounded tracking-widest transition-colors uppercase" style="background-color: var(--primary); transition: background-color 0.3s;">
                     ⏺ GRABAR
                 </button>
             </div>
-            
-            <button onclick="location.reload()" class="w-full text-center text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-2 p-2">
-                ← Cambiar Tribu
-            </button>
         </div>
     </div>
 
     <script>
-        // --- 1. CORE DOM & STATE ---
+        // --- CORE DOM ---
         const video = document.getElementById('camera-feed');
         const texCanvas = document.getElementById('texture-canvas');
         const texCtx = texCanvas.getContext('2d', { willReadFrequently: true });
         const container = document.getElementById('webgl-container');
         
-        const sliderInt = document.getElementById('sl-int');
-        const sliderScale = document.getElementById('sl-scale');
-        
-        const btnFlip = document.getElementById('btn-flip');
-        const btnPhoto = document.getElementById('btn-photo');
-        const btnRecord = document.getElementById('btn-record');
-
         let isStreamActive = false;
-        let currentFacingMode = 'user'; // Selfie by default
+        let currentFacingMode = 'user'; // Selfie start
 
-        // RGB Converter
         function hexToRgb(hex) {
             let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return result ? { r: parseInt(result[1], 16)/255, g: parseInt(result[2], 16)/255, b: parseInt(result[3], 16)/255 } : { r:1, g:1, b:1 };
         }
 
-        // --- 2. THREE.JS UBERSHADER SETUP ---
+        // --- UBERSHADER SETUP ---
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
         const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
@@ -174,21 +168,12 @@
             const width = window.innerWidth;
             const height = window.innerHeight;
             renderer.setSize(width, height);
-            if(shaderMat) {
-                shaderMat.uniforms.u_resolution.value.set(width, height);
-            }
+            if(shaderMat) shaderMat.uniforms.u_resolution.value.set(width, height);
         }
         window.addEventListener('resize', resize);
 
-        const vertexShader = `
-            varying vec2 vUv; 
-            void main() { 
-                vUv = uv; 
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
-            }
-        `;
+        const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
-        // EL FILTRO SGX TRIBAL (Cyberpunk Contrast + RGB Split + Luma Color Multiplication)
         const fragmentShader = `
             uniform sampler2D tDiffuse;
             uniform float u_intensity;
@@ -201,7 +186,6 @@
 
             float getLuma(vec3 color) { return dot(color, vec3(0.299, 0.587, 0.114)); }
             
-            // Aberración Cromática Sutil
             vec3 rgbSplit(sampler2D tex, vec2 uv, float splitAmount) {
                 float r = texture2D(tex, vec2(uv.x + splitAmount, uv.y)).r;
                 float g = texture2D(tex, uv).g;
@@ -211,36 +195,22 @@
 
             void main() {
                 vec2 uv = vUv;
-                
-                // Espejo para selfie
                 if(u_flip > 0.5) uv.x = 1.0 - uv.x;
 
-                // 1. RGB Split (Cyberpunk Vibe)
                 vec3 finalColor = rgbSplit(tDiffuse, uv, 0.005 * u_intensity);
-                
-                // 2. Alto Contraste (Crush Blacks, Boost Highlights)
                 finalColor = (finalColor - 0.5) * (1.0 + 0.4 * u_intensity) + 0.5;
                 
                 float luma = getLuma(finalColor);
-
-                // 3. Multiplicador de Tinte Tribal (Shadows/Midtones)
-                // Usamos el color de la tribu para teñir las sombras y medios tonos sin quemar los highlights (la piel)
                 vec3 tribalTint = mix(finalColor, finalColor * u_tint_color * 2.5, u_intensity);
-                
-                // Protegemos las luces altas para que las caras no se vean radioactivas
                 finalColor = mix(tribalTint, finalColor, smoothstep(0.6, 1.0, luma));
 
-                // 4. Hologram AR Grid (Dot Pattern)
                 if (u_grid > 0.0) {
                     vec2 aspectUv = uv;
                     aspectUv.x *= u_resolution.x / u_resolution.y; 
-                    
                     vec2 gridUv = aspectUv * 150.0; 
                     vec2 cellCenter = fract(gridUv) - 0.5; 
-                    
                     float dotGrid = 1.0 - step(0.12 * u_grid, length(cellCenter));
                     
-                    // Edge detection
                     vec2 texel = (1.0 / u_resolution) * 2.0;
                     float s00 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1, -1)).rgb);
                     float s22 = getLuma(texture2D(tDiffuse, uv + texel * vec2(1, 1)).rgb);
@@ -249,7 +219,6 @@
                     float edge = abs(s00 - s22) + abs(s02 - s20);
                     
                     vec3 arGlow = u_tint_color * edge * 4.0 * u_grid; 
-                    
                     finalColor = mix(finalColor, finalColor + arGlow + (u_tint_color * dotGrid * 0.5), u_grid * 0.5);
                 }
 
@@ -264,38 +233,32 @@
                 u_grid: { value: 0.5 },
                 u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
                 u_flip: { value: 1.0 }, 
-                u_tint_color: { value: new THREE.Vector3(0, 1, 0) } // Default verde
+                u_tint_color: { value: new THREE.Vector3(0, 1, 0) } 
             },
             vertexShader: vertexShader,
             fragmentShader: fragmentShader
         });
 
-        const geometry = new THREE.PlaneGeometry(2, 2);
-        const plane = new THREE.Mesh(geometry, shaderMat);
-        scene.add(plane);
+        scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shaderMat));
 
-        // --- 3. INIT FLOW & CAMERA ---
+        // --- SISTEMA DE INICIALIZACIÓN ---
         let currentStream = null;
 
-        function initFilter(tribeName, hexColor) {
-            // Update Branding
-            document.documentElement.style.setProperty('--primary', hexColor);
-            document.getElementById('tribe-label').innerText = "SANGRE " + tribeName;
-            document.getElementById('tribe-label').style.color = hexColor;
-            
-            // Update Shader Tint
-            const c = hexToRgb(hexColor);
-            shaderMat.uniforms.u_tint_color.value.set(c.r, c.g, c.b);
-
-            // UI Transition
-            document.getElementById('tribe-selector').classList.add('hidden');
-            document.getElementById('controls-ui').classList.remove('hidden');
-
-            startCamera();
-        }
+        document.getElementById('btn-init').addEventListener('click', async () => {
+            document.getElementById('btn-init').innerText = "CONECTANDO...";
+            await startCamera();
+            document.getElementById('start-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('start-screen').classList.add('hidden');
+                document.getElementById('controls-ui').classList.remove('hidden');
+                document.getElementById('watermark').classList.remove('hidden');
+                // Inicializa tribu default
+                swapTribe('UPRM', '#008f39');
+            }, 400);
+        });
 
         async function startCamera() {
-            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
+            if (currentStream) currentStream.getTracks().forEach(track => track.stop());
 
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -310,9 +273,7 @@
                 video.onloadedmetadata = () => {
                     texCanvas.width = video.videoWidth;
                     texCanvas.height = video.videoHeight;
-                    
                     shaderMat.uniforms.u_flip.value = (currentFacingMode === 'user') ? 1.0 : 0.0;
-                    
                     resize();
                     
                     if (!isStreamActive) {
@@ -321,56 +282,68 @@
                     }
                 };
             } catch (err) {
-                console.error("Camera access failed", err);
-                alert("Error al acceder a la cámara. Asegúrate de dar permisos en tu navegador.");
+                console.error(err);
+                alert("Error de cámara. Asegúrate de dar permisos.");
             }
         }
 
         function drawFrame() {
             if (!isStreamActive) return;
             requestAnimationFrame(drawFrame);
-
             if (video.readyState >= video.HAVE_CURRENT_DATA) {
                 texCtx.drawImage(video, 0, 0, texCanvas.width, texCanvas.height);
                 videoTexture.needsUpdate = true;
             }
-            
             renderer.render(scene, camera);
         }
 
-        btnFlip.addEventListener('click', () => {
+        // --- HOT-SWAP DE TRIBUS ---
+        function swapTribe(id, hexColor) {
+            // Actualizar Variables CSS y Textos
+            document.documentElement.style.setProperty('--primary', hexColor);
+            document.getElementById('tribe-label').innerText = "SANGRE " + id.toUpperCase();
+            
+            // Actualizar Shader 3D Instantáneamente
+            const c = hexToRgb(hexColor);
+            shaderMat.uniforms.u_tint_color.value.set(c.r, c.g, c.b);
+
+            // Actualizar Botones Táctiles
+            document.querySelectorAll('.tribe-btn').forEach(btn => {
+                btn.className = "tribe-btn"; // reset classes
+            });
+            document.getElementById('btn-' + id.toLowerCase()).classList.add('active-' + id.toLowerCase());
+        }
+
+        // --- CONTROLES Y CAPTURA ---
+        document.getElementById('btn-flip').addEventListener('click', () => {
             currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-            startCamera();
+            startCamera(); // Único momento donde pedimos re-inicio de cámara
         });
 
-        // --- 4. TWEAKS (SLIDERS) ---
-        sliderInt.addEventListener('input', (e) => {
-            shaderMat.uniforms.u_intensity.value = parseFloat(e.target.value);
-        });
+        document.getElementById('sl-int').addEventListener('input', (e) => shaderMat.uniforms.u_intensity.value = parseFloat(e.target.value));
+        document.getElementById('sl-scale').addEventListener('input', (e) => shaderMat.uniforms.u_grid.value = parseFloat(e.target.value));
 
-        sliderScale.addEventListener('input', (e) => {
-            shaderMat.uniforms.u_grid.value = parseFloat(e.target.value);
-        });
-
-        // --- 5. CAPTURE LOGIC ---
-        btnPhoto.addEventListener('click', () => {
-            renderer.render(scene, camera);
+        // FOTO
+        document.getElementById('btn-photo').addEventListener('click', () => {
+            renderer.render(scene, camera); // Fuerza render final
             const dataURL = renderer.domElement.toDataURL('image/jpeg', 0.9);
             const a = document.createElement('a');
             a.href = dataURL;
-            a.download = `SGX_Sangre_${Date.now()}.jpg`;
+            a.download = `SGX_AR_Shot_${Date.now()}.jpg`;
             a.click();
             
-            // Flash Effect
+            // Flash Effect (Solo visual UI)
             const flash = document.createElement('div');
             flash.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;z-index:9999;transition:opacity 0.3s;opacity:1;pointer-events:none;';
             document.body.appendChild(flash);
-            setTimeout(() => { flash.style.opacity = '0'; }, 50);
-            setTimeout(() => { document.body.removeChild(flash); }, 350);
+            setTimeout(() => flash.style.opacity = '0', 50);
+            setTimeout(() => document.body.removeChild(flash), 350);
         });
 
+        // GRABACIÓN DE VIDEO NATIVA DEL CANVAS (Excluye HTML UI por defecto)
         let mediaRecorder;
         let recordedChunks = [];
+        const btnRecord = document.getElementById('btn-record');
         
         btnRecord.addEventListener('click', () => {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -379,6 +352,7 @@
                 btnRecord.classList.remove('bg-red-600', 'text-white', 'animate-pulse');
                 btnRecord.style.backgroundColor = "var(--primary)";
                 btnRecord.style.color = "black";
+                document.getElementById('rec-indicator').style.display = 'none';
                 return;
             }
 
@@ -399,7 +373,7 @@
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = `SGX_Video_Sangre.webm`;
+                a.download = `SGX_AR_Video.webm`;
                 document.body.appendChild(a);
                 a.click();
                 setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
@@ -408,8 +382,9 @@
             mediaRecorder.start();
             
             btnRecord.textContent = '⏹ DETENER';
-            btnRecord.style.backgroundColor = ""; // Clear inline style
+            btnRecord.style.backgroundColor = ""; 
             btnRecord.classList.add('bg-red-600', 'text-white', 'animate-pulse');
+            document.getElementById('rec-indicator').style.display = 'block';
         });
 
         resize();
