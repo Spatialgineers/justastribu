@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SGX AR Identity Filter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        :root {
+            --primary: #008f39; /* Verde SGX/Colegio */
+            --glass: rgba(10, 10, 15, 0.85);
+        }
+
+        body { 
+            background-color: #050505; 
+            color: #fff; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            overflow: hidden; 
+            margin: 0; 
+            touch-action: manipulation; 
+        }
+
+        .cyber-font { font-family: 'Orbitron', sans-serif; }
+        
+        /* Tactical Sliders */
+        input[type=range] { 
+            -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 10;
+        }
+        input[type=range]::-webkit-slider-thumb { 
+            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%;
+            background: var(--primary); cursor: pointer; border: 2px solid #000;
+            box-shadow: 0 0 10px var(--primary); margin-top: -7px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px;
+        }
+
+        /* Layout & Overlays */
+        #webgl-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+        
+        .ui-layer { position: absolute; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: space-between; height: 100%; pointer-events: none; }
+        .pointer-events-auto { pointer-events: auto; }
+
+        /* BRANDING FIJO */
+        #watermark {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            text-align: center; z-index: 50; width: 100%; text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+        }
+        #watermark h1 { font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 2px;}
+        #watermark p { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #fff; opacity: 0.8;}
+
+        /* TRIBE SELECTOR OVERLAY */
+        #tribe-selector {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--glass); z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            backdrop-filter: blur(15px); padding: 20px;
+            pointer-events: auto;
+        }
+        
+        .uni-btn {
+            width: 100%; max-width: 320px; padding: 18px; margin-bottom: 15px;
+            background: rgba(0,0,0,0.6); border: 2px solid; border-radius: 12px;
+            font-size: 16px; font-weight: 900; cursor: pointer; color: white;
+            text-transform: uppercase; letter-spacing: 1.5px; transition: 0.2s;
+            backdrop-filter: blur(5px);
+        }
+        .uni-btn:active { transform: scale(0.96); }
+        .uni-uprm { border-color: #008f39; box-shadow: 0 0 15px rgba(0,143,57,0.3); } 
+        .uni-inter { border-color: #FDCC0D; box-shadow: 0 0 15px rgba(253,204,13,0.3); } 
+        .uni-iupi { border-color: #cc0000; box-shadow: 0 0 15px rgba(204,0,0,0.3); } 
+        .uni-sagrado { border-color: #ff007f; box-shadow: 0 0 15px rgba(255,0,127,0.3); } 
+
+        .sgx-panel { background: rgba(5, 5, 8, 0.85); backdrop-filter: blur(10px); border: 1px solid #222; }
+    </style>
+</head>
+<body>
+
+    <div id="webgl-container">
+        <video id="camera-feed" class="hidden" autoplay playsinline muted></video>
+        <canvas id="texture-canvas" class="hidden"></canvas>
+    </div>
+
+    <div id="watermark">
+        <h1 id="tribe-label" class="cyber-font">FILTRO DE SANGRE</h1>
+        <p>SGX JUSTAS CHALLENGE | Spatialgineers x Somos Mayagüez</p>
+    </div>
+
+    <div id="tribe-selector">
+        <h1 class="cyber-font text-2xl text-center text-white mb-2 shadow-black">Identidad Visual AR</h1>
+        <p class="text-xs text-gray-400 text-center mb-8 tracking-widest uppercase">Selecciona tu tribu para aplicar filtro</p>
+        
+        <button class="uni-btn uni-uprm" onclick="initFilter('Colegio', '#008f39')">Colegio (UPRM)</button>
+        <button class="uni-btn uni-inter" onclick="initFilter('Interamericana', '#FDCC0D')">Interamericana</button>
+        <button class="uni-btn uni-iupi" onclick="initFilter('La Iupi', '#cc0000')">La Iupi (UPRRP)</button>
+        <button class="uni-btn uni-sagrado" onclick="initFilter('Sagrado', '#ff007f')">Sagrado</button>
+    </div>
+
+    <div id="controls-ui" class="ui-layer pb-6 pt-10 px-4 md:px-6 hidden">
+        
+        <div class="flex justify-between items-start">
+            </div>
+
+        <div class="pointer-events-auto sgx-panel rounded-xl p-4 flex flex-col gap-3 max-w-md mx-auto w-full shadow-2xl">
+            
+            <div class="grid grid-cols-2 gap-4 border-b border-gray-800 pb-4 mb-2 mt-2">
+                <div>
+                    <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-2"><label>TINT INTENSITY</label></div>
+                    <input type="range" id="sl-int" min="0" max="1" step="0.05" value="0.8">
+                </div>
+                <div>
+                    <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-2"><label>HOLO GRID</label></div>
+                    <input type="range" id="sl-scale" min="0.0" max="1" step="0.05" value="0.5">
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button id="btn-flip" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-[11px] font-bold py-3 rounded tracking-widest transition-colors border border-gray-700 uppercase">
+                    ⟲ FLIP
+                </button>
+                <button id="btn-photo" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-[11px] font-bold py-3 rounded tracking-widest transition-colors border border-gray-700">
+                    📸 FOTO
+                </button>
+                <button id="btn-record" class="flex-1 text-black text-[11px] font-bold py-3 rounded tracking-widest transition-colors uppercase" style="background-color: var(--primary);">
+                    ⏺ GRABAR
+                </button>
+            </div>
+            
+            <button onclick="location.reload()" class="w-full text-center text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-2 p-2">
+                ← Cambiar Tribu
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CORE DOM & STATE ---
+        const video = document.getElementById('camera-feed');
+        const texCanvas = document.getElementById('texture-canvas');
+        const texCtx = texCanvas.getContext('2d', { willReadFrequently: true });
+        const container = document.getElementById('webgl-container');
+        
+        const sliderInt = document.getElementById('sl-int');
+        const sliderScale = document.getElementById('sl-scale');
+        
+        const btnFlip = document.getElementById('btn-flip');
+        const btnPhoto = document.getElementById('btn-photo');
+        const btnRecord = document.getElementById('btn-record');
+
+        let isStreamActive = false;
+        let currentFacingMode = 'user'; // Selfie by default
+
+        // RGB Converter
+        function hexToRgb(hex) {
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? { r: parseInt(result[1], 16)/255, g: parseInt(result[2], 16)/255, b: parseInt(result[3], 16)/255 } : { r:1, g:1, b:1 };
+        }
+
+        // --- 2. THREE.JS UBERSHADER SETUP ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const videoTexture = new THREE.CanvasTexture(texCanvas);
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+
+        function resize() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height);
+            if(shaderMat) {
+                shaderMat.uniforms.u_resolution.value.set(width, height);
+            }
+        }
+        window.addEventListener('resize', resize);
+
+        const vertexShader = `
+            varying vec2 vUv; 
+            void main() { 
+                vUv = uv; 
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
+            }
+        `;
+
+        // EL FILTRO SGX TRIBAL (Cyberpunk Contrast + RGB Split + Luma Color Multiplication)
+        const fragmentShader = `
+            uniform sampler2D tDiffuse;
+            uniform float u_intensity;
+            uniform float u_grid;
+            uniform vec2 u_resolution;
+            uniform float u_flip;
+            uniform vec3 u_tint_color;
+
+            varying vec2 vUv;
+
+            float getLuma(vec3 color) { return dot(color, vec3(0.299, 0.587, 0.114)); }
+            
+            // Aberración Cromática Sutil
+            vec3 rgbSplit(sampler2D tex, vec2 uv, float splitAmount) {
+                float r = texture2D(tex, vec2(uv.x + splitAmount, uv.y)).r;
+                float g = texture2D(tex, uv).g;
+                float b = texture2D(tex, vec2(uv.x - splitAmount, uv.y)).b;
+                return vec3(r, g, b);
+            }
+
+            void main() {
+                vec2 uv = vUv;
+                
+                // Espejo para selfie
+                if(u_flip > 0.5) uv.x = 1.0 - uv.x;
+
+                // 1. RGB Split (Cyberpunk Vibe)
+                vec3 finalColor = rgbSplit(tDiffuse, uv, 0.005 * u_intensity);
+                
+                // 2. Alto Contraste (Crush Blacks, Boost Highlights)
+                finalColor = (finalColor - 0.5) * (1.0 + 0.4 * u_intensity) + 0.5;
+                
+                float luma = getLuma(finalColor);
+
+                // 3. Multiplicador de Tinte Tribal (Shadows/Midtones)
+                // Usamos el color de la tribu para teñir las sombras y medios tonos sin quemar los highlights (la piel)
+                vec3 tribalTint = mix(finalColor, finalColor * u_tint_color * 2.5, u_intensity);
+                
+                // Protegemos las luces altas para que las caras no se vean radioactivas
+                finalColor = mix(tribalTint, finalColor, smoothstep(0.6, 1.0, luma));
+
+                // 4. Hologram AR Grid (Dot Pattern)
+                if (u_grid > 0.0) {
+                    vec2 aspectUv = uv;
+                    aspectUv.x *= u_resolution.x / u_resolution.y; 
+                    
+                    vec2 gridUv = aspectUv * 150.0; 
+                    vec2 cellCenter = fract(gridUv) - 0.5; 
+                    
+                    float dotGrid = 1.0 - step(0.12 * u_grid, length(cellCenter));
+                    
+                    // Edge detection
+                    vec2 texel = (1.0 / u_resolution) * 2.0;
+                    float s00 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1, -1)).rgb);
+                    float s22 = getLuma(texture2D(tDiffuse, uv + texel * vec2(1, 1)).rgb);
+                    float s02 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1, 1)).rgb);
+                    float s20 = getLuma(texture2D(tDiffuse, uv + vec2(1, -1)).rgb);
+                    float edge = abs(s00 - s22) + abs(s02 - s20);
+                    
+                    vec3 arGlow = u_tint_color * edge * 4.0 * u_grid; 
+                    
+                    finalColor = mix(finalColor, finalColor + arGlow + (u_tint_color * dotGrid * 0.5), u_grid * 0.5);
+                }
+
+                gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
+            }
+        `;
+
+        const shaderMat = new THREE.ShaderMaterial({
+            uniforms: {
+                tDiffuse: { value: videoTexture },
+                u_intensity: { value: 0.8 },
+                u_grid: { value: 0.5 },
+                u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                u_flip: { value: 1.0 }, 
+                u_tint_color: { value: new THREE.Vector3(0, 1, 0) } // Default verde
+            },
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader
+        });
+
+        const geometry = new THREE.PlaneGeometry(2, 2);
+        const plane = new THREE.Mesh(geometry, shaderMat);
+        scene.add(plane);
+
+        // --- 3. INIT FLOW & CAMERA ---
+        let currentStream = null;
+
+        function initFilter(tribeName, hexColor) {
+            // Update Branding
+            document.documentElement.style.setProperty('--primary', hexColor);
+            document.getElementById('tribe-label').innerText = "SANGRE " + tribeName;
+            document.getElementById('tribe-label').style.color = hexColor;
+            
+            // Update Shader Tint
+            const c = hexToRgb(hexColor);
+            shaderMat.uniforms.u_tint_color.value.set(c.r, c.g, c.b);
+
+            // UI Transition
+            document.getElementById('tribe-selector').classList.add('hidden');
+            document.getElementById('controls-ui').classList.remove('hidden');
+
+            startCamera();
+        }
+
+        async function startCamera() {
+            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, 
+                    audio: false 
+                });
+                
+                currentStream = stream;
+                video.srcObject = stream;
+                await video.play();
+                
+                video.onloadedmetadata = () => {
+                    texCanvas.width = video.videoWidth;
+                    texCanvas.height = video.videoHeight;
+                    
+                    shaderMat.uniforms.u_flip.value = (currentFacingMode === 'user') ? 1.0 : 0.0;
+                    
+                    resize();
+                    
+                    if (!isStreamActive) {
+                        isStreamActive = true;
+                        drawFrame();
+                    }
+                };
+            } catch (err) {
+                console.error("Camera access failed", err);
+                alert("Error al acceder a la cámara. Asegúrate de dar permisos en tu navegador.");
+            }
+        }
+
+        function drawFrame() {
+            if (!isStreamActive) return;
+            requestAnimationFrame(drawFrame);
+
+            if (video.readyState >= video.HAVE_CURRENT_DATA) {
+                texCtx.drawImage(video, 0, 0, texCanvas.width, texCanvas.height);
+                videoTexture.needsUpdate = true;
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        btnFlip.addEventListener('click', () => {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            startCamera();
+        });
+
+        // --- 4. TWEAKS (SLIDERS) ---
+        sliderInt.addEventListener('input', (e) => {
+            shaderMat.uniforms.u_intensity.value = parseFloat(e.target.value);
+        });
+
+        sliderScale.addEventListener('input', (e) => {
+            shaderMat.uniforms.u_grid.value = parseFloat(e.target.value);
+        });
+
+        // --- 5. CAPTURE LOGIC ---
+        btnPhoto.addEventListener('click', () => {
+            renderer.render(scene, camera);
+            const dataURL = renderer.domElement.toDataURL('image/jpeg', 0.9);
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = `SGX_Sangre_${Date.now()}.jpg`;
+            a.click();
+            
+            // Flash Effect
+            const flash = document.createElement('div');
+            flash.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;z-index:9999;transition:opacity 0.3s;opacity:1;pointer-events:none;';
+            document.body.appendChild(flash);
+            setTimeout(() => { flash.style.opacity = '0'; }, 50);
+            setTimeout(() => { document.body.removeChild(flash); }, 350);
+        });
+
+        let mediaRecorder;
+        let recordedChunks = [];
+        
+        btnRecord.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                btnRecord.textContent = '⏺ GRABAR';
+                btnRecord.classList.remove('bg-red-600', 'text-white', 'animate-pulse');
+                btnRecord.style.backgroundColor = "var(--primary)";
+                btnRecord.style.color = "black";
+                return;
+            }
+
+            recordedChunks = [];
+            const stream = renderer.domElement.captureStream(30);
+            let mimeType = 'video/mp4';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm; codecs=vp9';
+                if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+            }
+
+            mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `SGX_Video_Sangre.webm`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
+            };
+
+            mediaRecorder.start();
+            
+            btnRecord.textContent = '⏹ DETENER';
+            btnRecord.style.backgroundColor = ""; // Clear inline style
+            btnRecord.classList.add('bg-red-600', 'text-white', 'animate-pulse');
+        });
+
+        resize();
+    </script>
+</body>
+</html>
