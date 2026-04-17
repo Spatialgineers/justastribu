@@ -41,7 +41,7 @@
         .ui-layer { position: absolute; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: space-between; height: 100%; pointer-events: none; }
         .pointer-events-auto { pointer-events: auto; }
 
-        /* BRANDING FIJO (HTML: No sale en el renderizado final del Canvas) */
+        /* BRANDING FIJO (No sale en el renderizado final del Canvas) */
         #watermark {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             text-align: center; z-index: 50; width: 100%; text-shadow: 0 2px 10px rgba(0,0,0,0.9);
@@ -146,7 +146,7 @@
         const container = document.getElementById('webgl-container');
         
         let isStreamActive = false;
-        let currentFacingMode = 'user'; // Selfie start
+        let currentFacingMode = 'user'; 
 
         function hexToRgb(hex) {
             let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -241,24 +241,18 @@
 
         scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shaderMat));
 
-        // --- SISTEMA DE INICIALIZACIÓN ---
+        // --- INICIALIZADOR DE CÁMARA (Lógica Base Restaurada) ---
         let currentStream = null;
 
-        document.getElementById('btn-init').addEventListener('click', async () => {
+        document.getElementById('btn-init').addEventListener('click', () => {
             document.getElementById('btn-init').innerText = "CONECTANDO...";
-            await startCamera();
-            document.getElementById('start-screen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('start-screen').classList.add('hidden');
-                document.getElementById('controls-ui').classList.remove('hidden');
-                document.getElementById('watermark').classList.remove('hidden');
-                // Inicializa tribu default
-                swapTribe('UPRM', '#008f39');
-            }, 400);
+            startCamera(); // Ejecución directa
         });
 
         async function startCamera() {
-            if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
 
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -273,43 +267,59 @@
                 video.onloadedmetadata = () => {
                     texCanvas.width = video.videoWidth;
                     texCanvas.height = video.videoHeight;
+                    
                     shaderMat.uniforms.u_flip.value = (currentFacingMode === 'user') ? 1.0 : 0.0;
                     resize();
                     
                     if (!isStreamActive) {
                         isStreamActive = true;
+                        
+                        // TRANSICIÓN SEGURA: El UI no se levanta hasta que la cámara confirma vida
+                        document.getElementById('start-screen').style.opacity = '0';
+                        setTimeout(() => {
+                            document.getElementById('start-screen').classList.add('hidden');
+                            document.getElementById('controls-ui').classList.remove('hidden');
+                            document.getElementById('watermark').classList.remove('hidden');
+                            
+                            // Iniciar con UPRM por default para que no esté vacío
+                            swapTribe('UPRM', '#008f39');
+                        }, 400);
+
                         drawFrame();
                     }
                 };
             } catch (err) {
-                console.error(err);
-                alert("Error de cámara. Asegúrate de dar permisos.");
+                console.error("Camera access denied", err);
+                alert("Error al acceder a la cámara. Asegúrate de dar los permisos correspondientes.");
+                document.getElementById('btn-init').innerText = "REINTENTAR";
             }
         }
 
         function drawFrame() {
             if (!isStreamActive) return;
             requestAnimationFrame(drawFrame);
+
             if (video.readyState >= video.HAVE_CURRENT_DATA) {
                 texCtx.drawImage(video, 0, 0, texCanvas.width, texCanvas.height);
                 videoTexture.needsUpdate = true;
             }
+            
             renderer.render(scene, camera);
         }
 
-        // --- HOT-SWAP DE TRIBUS ---
+        // --- HOT-SWAP DE TRIBUS (Cero recargas de cámara) ---
         function swapTribe(id, hexColor) {
-            // Actualizar Variables CSS y Textos
+            // Variables CSS y Branding
             document.documentElement.style.setProperty('--primary', hexColor);
             document.getElementById('tribe-label').innerText = "SANGRE " + id.toUpperCase();
             
-            // Actualizar Shader 3D Instantáneamente
+            // Shader Color
             const c = hexToRgb(hexColor);
             shaderMat.uniforms.u_tint_color.value.set(c.r, c.g, c.b);
 
-            // Actualizar Botones Táctiles
+            // Botones Táctiles Activos
             document.querySelectorAll('.tribe-btn').forEach(btn => {
-                btn.className = "tribe-btn"; // reset classes
+                btn.className = "tribe-btn"; // Reset base
             });
             document.getElementById('btn-' + id.toLowerCase()).classList.add('active-' + id.toLowerCase());
         }
@@ -317,7 +327,7 @@
         // --- CONTROLES Y CAPTURA ---
         document.getElementById('btn-flip').addEventListener('click', () => {
             currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-            startCamera(); // Único momento donde pedimos re-inicio de cámara
+            startCamera(); // Aquí sí reiniciamos la cámara para voltearla
         });
 
         document.getElementById('sl-int').addEventListener('input', (e) => shaderMat.uniforms.u_intensity.value = parseFloat(e.target.value));
@@ -325,14 +335,13 @@
 
         // FOTO
         document.getElementById('btn-photo').addEventListener('click', () => {
-            renderer.render(scene, camera); // Fuerza render final
+            renderer.render(scene, camera);
             const dataURL = renderer.domElement.toDataURL('image/jpeg', 0.9);
             const a = document.createElement('a');
             a.href = dataURL;
-            a.download = `SGX_AR_Shot_${Date.now()}.jpg`;
+            a.download = `SGX_Sangre_${Date.now()}.jpg`;
             a.click();
             
-            // Flash Effect (Solo visual UI)
             const flash = document.createElement('div');
             flash.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;z-index:9999;transition:opacity 0.3s;opacity:1;pointer-events:none;';
             document.body.appendChild(flash);
@@ -340,7 +349,7 @@
             setTimeout(() => document.body.removeChild(flash), 350);
         });
 
-        // GRABACIÓN DE VIDEO NATIVA DEL CANVAS (Excluye HTML UI por defecto)
+        // GRABACIÓN DE VIDEO NATIVA (Excluye UI HTML)
         let mediaRecorder;
         let recordedChunks = [];
         const btnRecord = document.getElementById('btn-record');
