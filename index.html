@@ -26,7 +26,6 @@
 
         .cyber-font { font-family: 'Orbitron', sans-serif; }
         
-        /* SLIDERS ULTRA FINOS */
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 20; }
         input[type=range]::-webkit-slider-thumb { 
             -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
@@ -36,14 +35,17 @@
         input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 1px; }
 
-        /* LAYOUT CORE */
-        #webgl-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
-        canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+        /* EL CONTENEDOR MAESTRO DE FUSIÓN (COMPOSITING) */
+        #render-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        /* El WebGL que vemos en pantalla */
+        #webgl-canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+        /* El Canvas Invisible donde quemamos el logo y el 3D para el Export */
+        #export-canvas { display: none; }
         
         .ui-layer { position: absolute; bottom: 0; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; pointer-events: none; padding-bottom: 25px;}
         .pointer-events-auto { pointer-events: auto !important; }
 
-        /* BRANDING FIJO */
+        /* BRANDING FIJO VISUAL (Para el HUD, no para la exportación) */
         #watermark {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             text-align: center; z-index: 50; width: 100%; text-shadow: 0 2px 10px rgba(0,0,0,0.9);
@@ -52,7 +54,6 @@
         #watermark h1 { font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; color: var(--primary); margin-bottom: 2px; transition: color 0.3s;}
         #watermark p { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.8);}
 
-        /* INICIALIZADOR DE PERMISOS */
         #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(5,5,5,0.95); z-index: 1000;
@@ -60,14 +61,12 @@
             backdrop-filter: blur(10px); padding: 20px; pointer-events: auto; transition: opacity 0.4s;
         }
 
-        /* PANEL INFERIOR COMPACTO */
         .sgx-panel { 
             background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; 
             padding: 16px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
 
-        /* BOTONES DE TRIBU "PILLS" */
         .tribe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 15px; }
         .tribe-btn {
             background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
@@ -79,7 +78,6 @@
         .tribe-btn.active-iupi { border-color: #cc0000; color: #cc0000; background: rgba(204,0,0,0.1); box-shadow: 0 0 10px rgba(204,0,0,0.2); }
         .tribe-btn.active-sagrado { border-color: #ff007f; color: #ff007f; background: rgba(255,0,127,0.1); box-shadow: 0 0 10px rgba(255,0,127,0.2); }
 
-        /* BOTONES DE CÁMARA CIRCULARES */
         .cam-controls { display: flex; justify-content: space-evenly; align-items: center; margin-top: 10px; }
         
         .circle-btn {
@@ -89,38 +87,27 @@
         }
         .circle-btn:active { transform: scale(0.9); }
         
-        #btn-flip {
-            width: 44px; height: 44px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff;
-        }
+        #btn-flip { width: 44px; height: 44px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; }
+        #btn-photo { width: 64px; height: 64px; background: #fff; border: 4px solid rgba(255,255,255,0.3); background-clip: padding-box; box-shadow: 0 0 15px rgba(255,255,255,0.3); }
         
-        #btn-photo {
-            width: 64px; height: 64px; background: #fff; border: 4px solid rgba(255,255,255,0.3); background-clip: padding-box;
-            box-shadow: 0 0 15px rgba(255,255,255,0.3);
-        }
-        
-        #btn-record {
-            width: 54px; height: 54px; background: transparent; border: 3px solid var(--primary); color: var(--primary);
-            position: relative;
-        }
-        #btn-record .rec-icon {
-            width: 16px; height: 16px; background: var(--primary); border-radius: 50%; transition: all 0.3s ease;
-        }
-        #btn-record.recording .rec-icon {
-            width: 14px; height: 14px; border-radius: 4px; background: #ff0055; 
-        }
+        #btn-record { width: 54px; height: 54px; background: transparent; border: 3px solid var(--primary); color: var(--primary); position: relative; }
+        #btn-record .rec-icon { width: 16px; height: 16px; background: var(--primary); border-radius: 50%; transition: all 0.3s ease; }
+        #btn-record.recording .rec-icon { width: 14px; height: 14px; border-radius: 4px; background: #ff0055; }
         #btn-record.recording { border-color: #ff0055; box-shadow: 0 0 15px rgba(255,0,85,0.4); }
 
-        /* RECORDING INDICATOR */
         #rec-indicator { display: none; position: absolute; top: 25px; right: 25px; width: 10px; height: 10px; background: #ff0055; border-radius: 50%; box-shadow: 0 0 10px #ff0055; animation: pulse 1s infinite; z-index: 50; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div id="webgl-container">
-        <video id="camera-feed" style="display: none;" autoplay playsinline muted></video>
-        <canvas id="texture-canvas" style="display: none;"></canvas>
-    </div>
+    <video id="camera-feed" style="display: none;" autoplay playsinline muted></video>
+    <canvas id="texture-canvas" style="display: none;"></canvas>
+
+    <div id="render-container">
+        </div>
+    
+    <canvas id="export-canvas"></canvas>
 
     <div id="start-screen">
         <h1 class="cyber-font text-3xl text-center text-white mb-2 drop-shadow-lg">SGX STORY AR</h1>
@@ -128,7 +115,7 @@
         <button id="btn-init" class="w-full max-w-xs bg-white text-black font-black py-4 rounded-full uppercase tracking-widest hover:bg-gray-200 transition-transform active:scale-95">
             ACTIVAR CÁMARA
         </button>
-        <p class="text-[9px] text-gray-500 mt-6 text-center uppercase tracking-widest">Requiere acceso a la cámara</p>
+        <p class="text-[9px] text-gray-500 mt-6 text-center uppercase tracking-widest">Requiere acceso a micrófono y cámara</p>
     </div>
 
     <div id="watermark" style="display: none;">
@@ -139,9 +126,7 @@
     <div id="rec-indicator"></div>
 
     <div id="controls-ui" class="ui-layer px-4" style="display: none;">
-        
         <div class="pointer-events-auto sgx-panel max-w-sm mx-auto w-full">
-            
             <div class="tribe-grid">
                 <button class="tribe-btn" id="btn-uprm" onclick="swapTribe('UPRM', '#008f39')">UPRM</button>
                 <button class="tribe-btn" id="btn-inter" onclick="swapTribe('Inter', '#FDCC0D')">INTER</button>
@@ -162,42 +147,44 @@
 
             <div class="cam-controls">
                 <button id="btn-flip" class="circle-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 16V14a2 2 0 0 0-2-2h-8"></path>
-                        <path d="M14 16l-4-4 4-4"></path>
-                        <path d="M4 8v2a2 2 0 0 0 2 2h8"></path>
-                        <path d="M10 8l4 4-4 4"></path>
-                    </svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V14a2 2 0 0 0-2-2h-8"></path><path d="M14 16l-4-4 4-4"></path><path d="M4 8v2a2 2 0 0 0 2 2h8"></path><path d="M10 8l4 4-4 4"></path></svg>
                 </button>
-
                 <button id="btn-photo" class="circle-btn"></button>
-
-                <button id="btn-record" class="circle-btn">
-                    <div class="rec-icon"></div> 
-                </button>
+                <button id="btn-record" class="circle-btn"><div class="rec-icon"></div></button>
             </div>
         </div>
     </div>
 
     <script>
+        // --- 1. CORE DOM ---
         const video = document.getElementById('camera-feed');
         const texCanvas = document.getElementById('texture-canvas');
         const texCtx = texCanvas.getContext('2d', { willReadFrequently: true });
-        const container = document.getElementById('webgl-container');
+        const renderContainer = document.getElementById('render-container');
+        
+        // El Compositor (Donde se quema el watermark para exportar)
+        const exportCanvas = document.getElementById('export-canvas');
+        const exportCtx = exportCanvas.getContext('2d', { alpha: false });
         
         let isStreamActive = false;
         let currentFacingMode = 'user'; 
+        let audioStream = null; // Para guardar la pista del micrófono
+
+        let currentTribeName = "COLEGIO";
+        let currentTribeColorHex = "#008f39";
 
         function hexToRgb(hex) {
             let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return result ? { r: parseInt(result[1], 16)/255, g: parseInt(result[2], 16)/255, b: parseInt(result[3], 16)/255 } : { r:1, g:1, b:1 };
         }
 
+        // --- 2. UBERSHADER SETUP ---
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
         const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+        renderer.domElement.id = 'webgl-canvas';
         renderer.setPixelRatio(window.devicePixelRatio);
-        container.appendChild(renderer.domElement);
+        renderContainer.appendChild(renderer.domElement);
 
         const videoTexture = new THREE.CanvasTexture(texCanvas);
         videoTexture.minFilter = THREE.LinearFilter;
@@ -207,6 +194,11 @@
             const width = window.innerWidth;
             const height = window.innerHeight;
             renderer.setSize(width, height);
+            
+            // Sincronizar resoluciones de exportación
+            exportCanvas.width = width;
+            exportCanvas.height = height;
+
             if(shaderMat) shaderMat.uniforms.u_resolution.value.set(width, height);
         }
         window.addEventListener('resize', resize);
@@ -220,11 +212,9 @@
             uniform vec2 u_resolution;
             uniform float u_flip;
             uniform vec3 u_tint_color;
-
             varying vec2 vUv;
 
             float getLuma(vec3 color) { return dot(color, vec3(0.299, 0.587, 0.114)); }
-            
             vec3 rgbSplit(sampler2D tex, vec2 uv, float splitAmount) {
                 float r = texture2D(tex, vec2(uv.x + splitAmount, uv.y)).r;
                 float g = texture2D(tex, uv).g;
@@ -260,7 +250,6 @@
                     vec3 arGlow = u_tint_color * edge * 4.0 * u_grid; 
                     finalColor = mix(finalColor, finalColor + arGlow + (u_tint_color * dotGrid * 0.5), u_grid * 0.5);
                 }
-
                 gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
             }
         `;
@@ -282,33 +271,34 @@
 
         let currentStream = null;
 
-        // INICIALIZACIÓN DE CÁMARA (Event Handler del Botón)
         document.getElementById('btn-init').addEventListener('click', () => {
             document.getElementById('btn-init').innerText = "CONECTANDO...";
-            startCamera(true); // Pasamos 'true' para indicar que es el arranque inicial
+            startCamera(true); 
         });
 
         async function startCamera(isInitialBoot = false) {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-            }
+            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
 
             try {
+                // EXTREMADAMENTE IMPORTANTE: Pedimos video Y audio explícitamente para el Micrófono
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, 
-                    audio: false 
+                    audio: { echoCancellation: true, noiseSuppression: true } 
                 });
                 
                 currentStream = stream;
                 video.srcObject = stream;
                 
-                // MATA LA FRICCIÓN ASÍNCRONA: Ejecuta el play sin congelar el hilo principal
-                video.play().catch(e => console.warn("Video play info:", e));
+                // Extraer y guardar pista de audio para el export final
+                if (stream.getAudioTracks().length > 0) {
+                    audioStream = new MediaStream([stream.getAudioTracks()[0]]);
+                }
+                
+                video.play().catch(e => console.warn("Autoplay bloqueado:", e));
                 
                 video.onloadedmetadata = () => {
                     texCanvas.width = video.videoWidth;
                     texCanvas.height = video.videoHeight;
-                    
                     shaderMat.uniforms.u_flip.value = (currentFacingMode === 'user') ? 1.0 : 0.0;
                     resize();
                     
@@ -317,25 +307,50 @@
                         drawFrame();
                     }
 
-                    // SOLO DESTRUYE LA PANTALLA SI ES EL BOOT INICIAL
                     if (isInitialBoot) {
                         document.getElementById('start-screen').style.opacity = '0';
                         setTimeout(() => {
                             document.getElementById('start-screen').style.display = 'none';
-                            
                             document.getElementById('controls-ui').style.display = 'flex';
                             document.getElementById('watermark').style.display = 'block';
-                            
                             swapTribe('UPRM', '#008f39');
                         }, 400);
                     }
                 };
             } catch (err) {
                 console.error(err);
-                alert("Error al acceder a la cámara. Asegúrate de dar los permisos correspondientes.");
+                alert("Error crítico. Permite acceso al Micrófono y Cámara en tu navegador.");
                 document.getElementById('btn-init').innerText = "REINTENTAR";
             }
         }
+
+        // EL MOTOR COMPOSITOR (Quema el logo en el frame final)
+        function composeFrameForExport() {
+            // 1. Dibuja el frame 3D
+            exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
+            
+            // 2. Dibuja el Watermark encima del Canvas Exportador
+            exportCtx.textAlign = "center";
+            
+            // Logo Tribu
+            exportCtx.font = "900 24px 'Orbitron', sans-serif";
+            exportCtx.fillStyle = currentTribeColorHex;
+            exportCtx.shadowColor = "rgba(0,0,0,0.9)";
+            exportCtx.shadowBlur = 10;
+            exportCtx.shadowOffsetY = 2;
+            exportCtx.fillText("SANGRE " + currentTribeName, exportCanvas.width / 2, 60);
+
+            // Subtítulo
+            exportCtx.font = "bold 14px sans-serif";
+            exportCtx.fillStyle = "rgba(255,255,255,0.9)";
+            exportCtx.fillText("SGX JUSTAS CHALLENGE | Spatialgineers x Somos Mayagüez", exportCanvas.width / 2, 80);
+            
+            // Reset shadow para no afectar próximos frames
+            exportCtx.shadowColor = "transparent";
+            exportCtx.shadowBlur = 0;
+        }
+
+        let isRecording = false;
 
         function drawFrame() {
             if (!isStreamActive) return;
@@ -347,40 +362,46 @@
             }
             
             renderer.render(scene, camera);
+
+            // Solo quema el canvas de exportación si estamos grabando para salvar batería
+            if(isRecording) {
+                composeFrameForExport();
+            }
         }
 
         function swapTribe(id, hexColor) {
+            currentTribeName = id.toUpperCase();
+            currentTribeColorHex = hexColor;
+
             document.documentElement.style.setProperty('--primary', hexColor);
-            document.getElementById('tribe-label').innerText = "SANGRE " + id.toUpperCase();
+            document.getElementById('tribe-label').innerText = "SANGRE " + currentTribeName;
             
             const c = hexToRgb(hexColor);
             shaderMat.uniforms.u_tint_color.value.set(c.r, c.g, c.b);
 
-            document.querySelectorAll('.tribe-btn').forEach(btn => {
-                btn.className = "tribe-btn"; 
-            });
+            document.querySelectorAll('.tribe-btn').forEach(btn => btn.className = "tribe-btn");
             document.getElementById('btn-' + id.toLowerCase()).classList.add('active-' + id.toLowerCase());
         }
 
-        // --- CONTROLES Y CAPTURA ---
         document.getElementById('btn-flip').addEventListener('click', () => {
             currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-            startCamera(false); // Pasamos 'false' porque el UI ya está activo
+            startCamera(false); 
         });
 
         document.getElementById('sl-int').addEventListener('input', (e) => shaderMat.uniforms.u_intensity.value = parseFloat(e.target.value));
         document.getElementById('sl-scale').addEventListener('input', (e) => shaderMat.uniforms.u_grid.value = parseFloat(e.target.value));
 
-        // FOTO
+        // FOTO (Compositing Habilitado)
         document.getElementById('btn-photo').addEventListener('click', () => {
-            renderer.render(scene, camera);
-            const dataURL = renderer.domElement.toDataURL('image/jpeg', 0.9);
+            renderer.render(scene, camera); 
+            composeFrameForExport(); // Quemar el logo
+            
+            const dataURL = exportCanvas.toDataURL('image/jpeg', 0.95);
             const a = document.createElement('a');
             a.href = dataURL;
-            a.download = `SGX_Sangre_${Date.now()}.jpg`;
+            a.download = `SGX_Sangre_${currentTribeName}_${Date.now()}.jpg`;
             a.click();
             
-            // Flash Effect
             const flash = document.createElement('div');
             flash.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;z-index:9999;transition:opacity 0.3s;opacity:1;pointer-events:none;';
             document.body.appendChild(flash);
@@ -388,7 +409,7 @@
             setTimeout(() => document.body.removeChild(flash), 350);
         });
 
-        // GRABACIÓN DE VIDEO 
+        // GRABACIÓN DE VIDEO: AUDIO MERGE & MP4 FALLBACK
         let mediaRecorder;
         let recordedChunks = [];
         const btnRecord = document.getElementById('btn-record');
@@ -396,21 +417,45 @@
         btnRecord.addEventListener('click', () => {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
+                isRecording = false;
                 btnRecord.classList.remove('recording'); 
                 document.getElementById('rec-indicator').style.display = 'none';
                 return;
             }
 
             recordedChunks = [];
-            const stream = renderer.domElement.captureStream(30);
-            let mimeType = 'video/mp4';
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'video/webm; codecs=vp9';
-                if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+            
+            // 1. Extraer Stream Visual del Compositor (Con Logo) a 30 FPS
+            isRecording = true;
+            const visualStream = exportCanvas.captureStream(30);
+            
+            // 2. FUSIÓN (Merge) de Audio y Video
+            let combinedStream = visualStream;
+            if (audioStream) {
+                // Combina el track de video del canvas con el track de audio del micrófono
+                combinedStream = new MediaStream([
+                    ...visualStream.getVideoTracks(),
+                    ...audioStream.getAudioTracks()
+                ]);
             }
 
-            mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
-            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+            // 3. Negociación del Formato (MP4 prioritario)
+            let mimeType = 'video/mp4'; // Ideal para iOS/Safari
+            let fileExt = 'mp4';
+            
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm; codecs=vp9,opus'; // Alta calidad Chrome/Android
+                fileExt = 'mp4'; // El truco "Sucio": Forzamos extensión mp4 aunque sea webm para facilitar subida a redes. Instagram lee el header interno como quiera.
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'video/webm'; 
+                }
+            }
+
+            mediaRecorder = new MediaRecorder(combinedStream, { mimeType: mimeType });
+            
+            mediaRecorder.ondataavailable = (e) => { 
+                if (e.data.size > 0) recordedChunks.push(e.data); 
+            };
 
             mediaRecorder.onstop = () => {
                 const blob = new Blob(recordedChunks, { type: mimeType });
@@ -418,7 +463,7 @@
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = `SGX_AR_Video.webm`;
+                a.download = `SGX_AR_Video_${currentTribeName}.${fileExt}`;
                 document.body.appendChild(a);
                 a.click();
                 setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
