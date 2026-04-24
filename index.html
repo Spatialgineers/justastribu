@@ -27,14 +27,10 @@
 
         .cyber-font { font-family: 'Orbitron', sans-serif; }
         
-        /* EL CONTENEDOR MAESTRO DE FUSIÓN (COMPOSITING) */
         #render-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
-        /* El WebGL que vemos en pantalla: se ajustará al ratio automáticamente */
         #webgl-canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
-        /* El Canvas Invisible donde quemamos el logo y el 3D para el Export */
         #export-canvas { display: none; }
 
-        /* --- ELEMENTOS DE UI TRAÍDOS DEL JUEGO --- */
         .hub-header {
             position: absolute; top: 0; left: 0; width: 100%; padding: 20px 0;
             background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
@@ -80,7 +76,6 @@
 
         .ui-layer { position: absolute; bottom: 0; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; pointer-events: none; padding-bottom: 25px;}
 
-        /* BRANDING FIJO VISUAL */
         #watermark {
             position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
             text-align: center; z-index: 50; width: 100%; text-shadow: 0 2px 10px rgba(0,0,0,0.9);
@@ -88,7 +83,6 @@
         }
         #watermark h1 { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--text); margin-bottom: 2px; transition: text-shadow 0.3s;}
 
-        /* BOTONES DE TRIBUS (Añadidas 4 nuevas de la LAI) */
         .tribe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 15px; }
         .tribe-btn {
             background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.1); border-radius: 8px;
@@ -101,13 +95,11 @@
         .tribe-btn.active-inter { border-color: #FDCC0D; color: #FDCC0D; box-shadow: 0 0 10px rgba(253,204,13,0.3); background: rgba(253,204,13,0.1); }
         .tribe-btn.active-iupi { border-color: #cc0000; color: #cc0000; box-shadow: 0 0 10px rgba(204,0,0,0.3); background: rgba(204,0,0,0.1); }
         .tribe-btn.active-sagrado { border-color: #ff007f; color: #ff007f; box-shadow: 0 0 10px rgba(255,0,127,0.3); background: rgba(255,0,127,0.1); }
-        /* Nuevas Tribus LAI */
         .tribe-btn.active-uagm { border-color: #FF6600; color: #FF6600; box-shadow: 0 0 10px rgba(255,102,0,0.3); background: rgba(255,102,0,0.1); }
         .tribe-btn.active-pucpr { border-color: #0033A0; color: #0033A0; box-shadow: 0 0 10px rgba(0,51,160,0.3); background: rgba(0,51,160,0.1); }
         .tribe-btn.active-uprb { border-color: #00BFFF; color: #00BFFF; box-shadow: 0 0 10px rgba(0,191,255,0.3); background: rgba(0,191,255,0.1); }
         .tribe-btn.active-uprp { border-color: #8B0000; color: #8B0000; box-shadow: 0 0 10px rgba(139,0,0,0.3); background: rgba(139,0,0,0.1); }
 
-        /* CONTROLES DE CÁMARA Y SLIDERS */
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 20; }
         input[type=range]::-webkit-slider-thumb { 
             -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
@@ -140,23 +132,15 @@
 <body>
 
     <video id="camera-feed" style="display: none;" autoplay playsinline muted></video>
-
-    <div id="render-container">
-    </div>
-    
+    <div id="render-container"></div>
     <canvas id="export-canvas"></canvas>
 
     <div id="start-screen">
         <div class="hub-header"><h1 class="cyber-font">SGX Justas</h1></div>
-        
         <h1 class="cyber-font" style="font-size: 28px; text-transform: uppercase; color: var(--primary); margin-bottom: 5px; text-align: center; letter-spacing: 1px; transition: color 0.3s;">Filtro AR</h1>
         <p style="color: #aaa; margin-bottom: 30px; font-size: 13px; text-align: center; line-height: 1.5;">Selecciona tu tribu y activa la cámara</p>
-        
-        <button id="btn-init" class="action-btn fill">
-            ACTIVAR CÁMARA
-        </button>
+        <button id="btn-init" class="action-btn fill">ACTIVAR CÁMARA</button>
         <p style="font-size: 10px; color: #555; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; text-align: center;">Requiere acceso a micrófono y cámara</p>
-        
         <div class="hub-footer">Powered by <span>Spatialgineers</span><br>in collaboration with <span>Somos Mayagüez</span></div>
     </div>
 
@@ -205,9 +189,12 @@
         const video = document.getElementById('camera-feed');
         const renderContainer = document.getElementById('render-container');
         
-        // El Compositor (Donde se quema el watermark a resolución completa)
         const exportCanvas = document.getElementById('export-canvas');
-        const exportCtx = exportCanvas.getContext('2d', { alpha: false });
+        const exportCtx = exportCanvas.getContext('2d', { alpha: false, willReadFrequently: true });
+        
+        // CACHÉ DEL WATERMARK (La clave del performance)
+        const watermarkCache = document.createElement('canvas');
+        const cacheCtx = watermarkCache.getContext('2d', { alpha: true });
         
         let isStreamActive = false;
         let currentFacingMode = 'user'; 
@@ -221,14 +208,16 @@
             return result ? { r: parseInt(result[1], 16)/255, g: parseInt(result[2], 16)/255, b: parseInt(result[3], 16)/255 } : { r:1, g:1, b:1 };
         }
 
-        // --- 2. UBERSHADER SETUP PARA PERFORMANCE EXTREMO Y ALTA RESOLUCION ---
+        // --- 2. UBERSHADER SETUP ---
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        
+        // Optimización: Limitar Pixel Ratio a máximo 2 (Ayuda a iPhones Pro Max)
         const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.domElement.id = 'webgl-canvas';
         renderContainer.appendChild(renderer.domElement);
 
-        // Usamos VideoTexture directamente. Evita el cuello de botella del CPU y nos permite 4K sin lag.
         const videoTexture = new THREE.VideoTexture(video);
         videoTexture.minFilter = THREE.LinearFilter;
         videoTexture.magFilter = THREE.LinearFilter;
@@ -237,27 +226,54 @@
             let w = window.innerWidth;
             let h = window.innerHeight;
             
-            // Si el video ya cargó, amarramos el Canvas a la resolución nativa de la cámara,
-            // dejando que el CSS (object-fit) lo escale visualmente a la pantalla.
             if (video.videoWidth > 0 && isStreamActive) {
                 w = video.videoWidth;
                 h = video.videoHeight;
             }
 
             renderer.setSize(w, h, false); 
+            
+            // Actualizar tamaños de canvas internos
             exportCanvas.width = w;
             exportCanvas.height = h;
+            watermarkCache.width = w;
+            watermarkCache.height = h;
 
             if(shaderMat) shaderMat.uniforms.u_resolution.value.set(w, h);
+            
+            // Re-hornear el texto al nuevo tamaño
+            bakeWatermark();
         }
         window.addEventListener('resize', resize);
+
+        // FUNCIÓN QUE HORNEA EL TEXTO (Se llama solo cuando cambias tribu o rotas la pantalla)
+        function bakeWatermark() {
+            if (watermarkCache.width === 0) return;
+            
+            cacheCtx.clearRect(0, 0, watermarkCache.width, watermarkCache.height);
+            cacheCtx.textAlign = "center";
+            
+            let baseSize = watermarkCache.width * 0.06;
+            
+            cacheCtx.font = `900 ${baseSize}px 'Orbitron', sans-serif`;
+            cacheCtx.fillStyle = currentTribeColorHex;
+            cacheCtx.shadowColor = "rgba(0,0,0,0.9)";
+            cacheCtx.shadowBlur = baseSize * 0.4;
+            cacheCtx.shadowOffsetY = baseSize * 0.1;
+            cacheCtx.fillText("SANGRE " + currentTribeName, watermarkCache.width / 2, baseSize * 2.5);
+
+            let subSize = watermarkCache.width * 0.035;
+            cacheCtx.font = `bold ${subSize}px sans-serif`;
+            cacheCtx.fillStyle = "rgba(255,255,255,0.9)";
+            cacheCtx.fillText("SGX JUSTAS CHALLENGE | Spatialgineers x Somos Mayagüez", watermarkCache.width / 2, baseSize * 2.5 + subSize * 1.5);
+        }
 
         const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
         const fragmentShader = `
             uniform sampler2D tDiffuse;
             uniform float u_intensity;
-            uniform float u_grid; // Usado ahora como control de NEON
+            uniform float u_grid; 
             uniform vec2 u_resolution;
             uniform float u_flip;
             uniform vec3 u_tint_color;
@@ -283,9 +299,7 @@
                 vec3 tribalTint = mix(finalColor, finalColor * u_tint_color * 2.5, u_intensity);
                 finalColor = mix(tribalTint, finalColor, smoothstep(0.6, 1.0, luma));
 
-                // EFECTO SOBEL NEON ENVELOPING
                 if (u_grid > 0.0) {
-                    // Ajustamos el grosor del borde dinámicamente para que en 4K siga siendo visible
                     vec2 texel = 2.0 / u_resolution; 
                     
                     float g00 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1.0, -1.0)).rgb);
@@ -297,16 +311,11 @@
                     float g12 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 0.0,  1.0)).rgb);
                     float g22 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 1.0,  1.0)).rgb);
 
-                    // Operador Sobel real
                     float sx = g00 + 2.0 * g01 + g02 - (g20 + 2.0 * g21 + g22);
                     float sy = g00 + 2.0 * g10 + g20 - (g02 + 2.0 * g12 + g22);
                     
                     float edge = sqrt(sx * sx + sy * sy);
-                    
-                    // Multiplicar el edge por el color seleccionado para crear el brillo de Neon
                     vec3 neonGlow = u_tint_color * edge * 4.0 * u_grid; 
-                    
-                    // Additive blending sobre el color final para el envelope
                     finalColor += neonGlow;
                 }
                 gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
@@ -317,7 +326,7 @@
             uniforms: {
                 tDiffuse: { value: videoTexture },
                 u_intensity: { value: 0.8 },
-                u_grid: { value: 0.7 }, // Representa Neon Intensity
+                u_grid: { value: 0.7 }, 
                 u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
                 u_flip: { value: 1.0 }, 
                 u_tint_color: { value: new THREE.Vector3(0, 1, 0) } 
@@ -339,9 +348,9 @@
             if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
 
             try {
-                // Solicitando una resolución exageradamente alta (4K) para forzar al celular a dar su max hardware cap
+                // OPTIMIZACIÓN: 1080p en lugar de 4K. Mantiene calidad sin derretir el GPU en tiempo real.
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: currentFacingMode, width: { ideal: 3840 }, height: { ideal: 2160 } }, 
+                    video: { facingMode: currentFacingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }, 
                     audio: { echoCancellation: true, noiseSuppression: true } 
                 });
                 
@@ -362,7 +371,6 @@
                         drawFrame();
                     }
                     
-                    // Aplicar resolución real inmediatamente
                     resize();
 
                     if (isInitialBoot) {
@@ -370,7 +378,6 @@
                         setTimeout(() => {
                             document.getElementById('start-screen').style.display = 'none';
                             document.getElementById('controls-ui').style.display = 'flex';
-                            
                             document.getElementById('watermark').style.display = 'block';
                             
                             swapTribe('UPRM', '#008f39');
@@ -384,41 +391,18 @@
             }
         }
 
-        // Compositor Dinámico: Ahora escala las tipografías asumiendo que el canvas puede ser gigante (ej. 4K)
-        function composeFrameForExport() {
-            exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
-            exportCtx.textAlign = "center";
-            
-            // Scalers automáticos basados en el tamaño de captura, así el texto nunca se ve chiquito
-            let baseSize = exportCanvas.width * 0.06;
-            
-            exportCtx.font = `900 ${baseSize}px 'Orbitron', sans-serif`;
-            exportCtx.fillStyle = currentTribeColorHex;
-            exportCtx.shadowColor = "rgba(0,0,0,0.9)";
-            exportCtx.shadowBlur = baseSize * 0.4;
-            exportCtx.shadowOffsetY = baseSize * 0.1;
-            exportCtx.fillText("SANGRE " + currentTribeName, exportCanvas.width / 2, baseSize * 2.5);
-
-            let subSize = exportCanvas.width * 0.035;
-            exportCtx.font = `bold ${subSize}px sans-serif`;
-            exportCtx.fillStyle = "rgba(255,255,255,0.9)";
-            exportCtx.fillText("SGX JUSTAS CHALLENGE | Spatialgineers x Somos Mayagüez", exportCanvas.width / 2, baseSize * 2.5 + subSize * 1.5);
-            
-            exportCtx.shadowColor = "transparent";
-            exportCtx.shadowBlur = 0;
-        }
-
         let isRecording = false;
 
         function drawFrame() {
             if (!isStreamActive) return;
             requestAnimationFrame(drawFrame);
 
-            // Al usar THREE.VideoTexture esto es todo lo que necesitamos, liberando CPU
             renderer.render(scene, camera);
 
+            // OPTIMIZACIÓN DE GRABACIÓN: Ya no redibuja sombras y texto, solo pega la imagen cacheada.
             if(isRecording) {
-                composeFrameForExport();
+                exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
+                exportCtx.drawImage(watermarkCache, 0, 0);
             }
         }
 
@@ -439,6 +423,9 @@
 
             document.querySelectorAll('.tribe-btn').forEach(btn => btn.className = "tribe-btn");
             document.getElementById('btn-' + id.toLowerCase()).classList.add('active-' + id.toLowerCase());
+
+            // Actualizar la caché del texto para el video/foto
+            bakeWatermark();
         }
 
         document.getElementById('btn-flip').addEventListener('click', () => {
@@ -452,7 +439,10 @@
         // FOTO EXPORT
         document.getElementById('btn-photo').addEventListener('click', () => {
             renderer.render(scene, camera); 
-            composeFrameForExport(); 
+            
+            // Estampar rápido
+            exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
+            exportCtx.drawImage(watermarkCache, 0, 0);
             
             const dataURL = exportCanvas.toDataURL('image/jpeg', 0.95);
             const a = document.createElement('a');
@@ -467,7 +457,7 @@
             setTimeout(() => document.body.removeChild(flash), 350);
         });
 
-        // GRABACIÓN DE VIDEO: AUDIO MERGE & MP4 FALLBACK
+        // GRABACIÓN DE VIDEO
         let mediaRecorder;
         let recordedChunks = [];
         const btnRecord = document.getElementById('btn-record');
@@ -504,7 +494,8 @@
                 }
             }
 
-            mediaRecorder = new MediaRecorder(combinedStream, { mimeType: mimeType });
+            // Un bitrate moderado para que el celular no se asfixie procesando video
+            mediaRecorder = new MediaRecorder(combinedStream, { mimeType: mimeType, videoBitsPerSecond: 5000000 });
             
             mediaRecorder.ondataavailable = (e) => { 
                 if (e.data.size > 0) recordedChunks.push(e.data); 
