@@ -29,13 +29,12 @@
         
         /* EL CONTENEDOR MAESTRO DE FUSIÓN (COMPOSITING) */
         #render-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
-        /* El WebGL que vemos en pantalla */
+        /* El WebGL que vemos en pantalla: se ajustará al ratio automáticamente */
         #webgl-canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
         /* El Canvas Invisible donde quemamos el logo y el 3D para el Export */
         #export-canvas { display: none; }
 
         /* --- ELEMENTOS DE UI TRAÍDOS DEL JUEGO --- */
-
         .hub-header {
             position: absolute; top: 0; left: 0; width: 100%; padding: 20px 0;
             background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
@@ -89,7 +88,7 @@
         }
         #watermark h1 { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--text); margin-bottom: 2px; transition: text-shadow 0.3s;}
 
-        /* BOTONES DE TRIBUS REESTILIZADOS */
+        /* BOTONES DE TRIBUS (Añadidas 4 nuevas de la LAI) */
         .tribe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 15px; }
         .tribe-btn {
             background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.1); border-radius: 8px;
@@ -102,6 +101,11 @@
         .tribe-btn.active-inter { border-color: #FDCC0D; color: #FDCC0D; box-shadow: 0 0 10px rgba(253,204,13,0.3); background: rgba(253,204,13,0.1); }
         .tribe-btn.active-iupi { border-color: #cc0000; color: #cc0000; box-shadow: 0 0 10px rgba(204,0,0,0.3); background: rgba(204,0,0,0.1); }
         .tribe-btn.active-sagrado { border-color: #ff007f; color: #ff007f; box-shadow: 0 0 10px rgba(255,0,127,0.3); background: rgba(255,0,127,0.1); }
+        /* Nuevas Tribus LAI */
+        .tribe-btn.active-uagm { border-color: #FF6600; color: #FF6600; box-shadow: 0 0 10px rgba(255,102,0,0.3); background: rgba(255,102,0,0.1); }
+        .tribe-btn.active-pucpr { border-color: #0033A0; color: #0033A0; box-shadow: 0 0 10px rgba(0,51,160,0.3); background: rgba(0,51,160,0.1); }
+        .tribe-btn.active-uprb { border-color: #00BFFF; color: #00BFFF; box-shadow: 0 0 10px rgba(0,191,255,0.3); background: rgba(0,191,255,0.1); }
+        .tribe-btn.active-uprp { border-color: #8B0000; color: #8B0000; box-shadow: 0 0 10px rgba(139,0,0,0.3); background: rgba(139,0,0,0.1); }
 
         /* CONTROLES DE CÁMARA Y SLIDERS */
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 20; }
@@ -136,7 +140,6 @@
 <body>
 
     <video id="camera-feed" style="display: none;" autoplay playsinline muted></video>
-    <canvas id="texture-canvas" style="display: none;"></canvas>
 
     <div id="render-container">
     </div>
@@ -170,6 +173,10 @@
                 <button class="tribe-btn" id="btn-inter" onclick="swapTribe('Inter', '#FDCC0D')">INTER</button>
                 <button class="tribe-btn" id="btn-iupi" onclick="swapTribe('Iupi', '#cc0000')">IUPI</button>
                 <button class="tribe-btn" id="btn-sagrado" onclick="swapTribe('Sagrado', '#ff007f')">SAGR</button>
+                <button class="tribe-btn" id="btn-uagm" onclick="swapTribe('UAGM', '#FF6600')">UAGM</button>
+                <button class="tribe-btn" id="btn-pucpr" onclick="swapTribe('PUCPR', '#0033A0')">PUCPR</button>
+                <button class="tribe-btn" id="btn-uprb" onclick="swapTribe('UPRB', '#00BFFF')">UPRB</button>
+                <button class="tribe-btn" id="btn-uprp" onclick="swapTribe('UPRP', '#8B0000')">UPRP</button>
             </div>
 
             <div class="grid grid-cols-2 gap-6 pb-2 mb-2 px-2">
@@ -178,8 +185,8 @@
                     <input type="range" id="sl-int" min="0" max="1" step="0.05" value="0.8">
                 </div>
                 <div>
-                    <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-1 tracking-wider uppercase"><label>GRID</label></div>
-                    <input type="range" id="sl-scale" min="0.0" max="1" step="0.05" value="0.5">
+                    <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-1 tracking-wider uppercase"><label>NEON</label></div>
+                    <input type="range" id="sl-scale" min="0.0" max="1" step="0.05" value="0.7">
                 </div>
             </div>
 
@@ -196,11 +203,9 @@
     <script>
         // --- 1. CORE DOM ---
         const video = document.getElementById('camera-feed');
-        const texCanvas = document.getElementById('texture-canvas');
-        const texCtx = texCanvas.getContext('2d', { willReadFrequently: true });
         const renderContainer = document.getElementById('render-container');
         
-        // El Compositor (Donde se quema el watermark para exportar)
+        // El Compositor (Donde se quema el watermark a resolución completa)
         const exportCanvas = document.getElementById('export-canvas');
         const exportCtx = exportCanvas.getContext('2d', { alpha: false });
         
@@ -216,27 +221,34 @@
             return result ? { r: parseInt(result[1], 16)/255, g: parseInt(result[2], 16)/255, b: parseInt(result[3], 16)/255 } : { r:1, g:1, b:1 };
         }
 
-        // --- 2. UBERSHADER SETUP ---
+        // --- 2. UBERSHADER SETUP PARA PERFORMANCE EXTREMO Y ALTA RESOLUCION ---
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
         const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
         renderer.domElement.id = 'webgl-canvas';
-        renderer.setPixelRatio(window.devicePixelRatio);
         renderContainer.appendChild(renderer.domElement);
 
-        const videoTexture = new THREE.CanvasTexture(texCanvas);
+        // Usamos VideoTexture directamente. Evita el cuello de botella del CPU y nos permite 4K sin lag.
+        const videoTexture = new THREE.VideoTexture(video);
         videoTexture.minFilter = THREE.LinearFilter;
         videoTexture.magFilter = THREE.LinearFilter;
 
         function resize() {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            renderer.setSize(width, height);
+            let w = window.innerWidth;
+            let h = window.innerHeight;
             
-            exportCanvas.width = width;
-            exportCanvas.height = height;
+            // Si el video ya cargó, amarramos el Canvas a la resolución nativa de la cámara,
+            // dejando que el CSS (object-fit) lo escale visualmente a la pantalla.
+            if (video.videoWidth > 0 && isStreamActive) {
+                w = video.videoWidth;
+                h = video.videoHeight;
+            }
 
-            if(shaderMat) shaderMat.uniforms.u_resolution.value.set(width, height);
+            renderer.setSize(w, h, false); 
+            exportCanvas.width = w;
+            exportCanvas.height = h;
+
+            if(shaderMat) shaderMat.uniforms.u_resolution.value.set(w, h);
         }
         window.addEventListener('resize', resize);
 
@@ -245,13 +257,14 @@
         const fragmentShader = `
             uniform sampler2D tDiffuse;
             uniform float u_intensity;
-            uniform float u_grid;
+            uniform float u_grid; // Usado ahora como control de NEON
             uniform vec2 u_resolution;
             uniform float u_flip;
             uniform vec3 u_tint_color;
             varying vec2 vUv;
 
             float getLuma(vec3 color) { return dot(color, vec3(0.299, 0.587, 0.114)); }
+            
             vec3 rgbSplit(sampler2D tex, vec2 uv, float splitAmount) {
                 float r = texture2D(tex, vec2(uv.x + splitAmount, uv.y)).r;
                 float g = texture2D(tex, uv).g;
@@ -270,22 +283,31 @@
                 vec3 tribalTint = mix(finalColor, finalColor * u_tint_color * 2.5, u_intensity);
                 finalColor = mix(tribalTint, finalColor, smoothstep(0.6, 1.0, luma));
 
+                // EFECTO SOBEL NEON ENVELOPING
                 if (u_grid > 0.0) {
-                    vec2 aspectUv = uv;
-                    aspectUv.x *= u_resolution.x / u_resolution.y; 
-                    vec2 gridUv = aspectUv * 150.0; 
-                    vec2 cellCenter = fract(gridUv) - 0.5; 
-                    float dotGrid = 1.0 - step(0.12 * u_grid, length(cellCenter));
+                    // Ajustamos el grosor del borde dinámicamente para que en 4K siga siendo visible
+                    vec2 texel = 2.0 / u_resolution; 
                     
-                    vec2 texel = (1.0 / u_resolution) * 2.0;
-                    float s00 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1, -1)).rgb);
-                    float s22 = getLuma(texture2D(tDiffuse, uv + texel * vec2(1, 1)).rgb);
-                    float s02 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1, 1)).rgb);
-                    float s20 = getLuma(texture2D(tDiffuse, uv + vec2(1, -1)).rgb);
-                    float edge = abs(s00 - s22) + abs(s02 - s20);
+                    float g00 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1.0, -1.0)).rgb);
+                    float g10 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 0.0, -1.0)).rgb);
+                    float g20 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 1.0, -1.0)).rgb);
+                    float g01 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1.0,  0.0)).rgb);
+                    float g21 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 1.0,  0.0)).rgb);
+                    float g02 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1.0,  1.0)).rgb);
+                    float g12 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 0.0,  1.0)).rgb);
+                    float g22 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 1.0,  1.0)).rgb);
+
+                    // Operador Sobel real
+                    float sx = g00 + 2.0 * g01 + g02 - (g20 + 2.0 * g21 + g22);
+                    float sy = g00 + 2.0 * g10 + g20 - (g02 + 2.0 * g12 + g22);
                     
-                    vec3 arGlow = u_tint_color * edge * 4.0 * u_grid; 
-                    finalColor = mix(finalColor, finalColor + arGlow + (u_tint_color * dotGrid * 0.5), u_grid * 0.5);
+                    float edge = sqrt(sx * sx + sy * sy);
+                    
+                    // Multiplicar el edge por el color seleccionado para crear el brillo de Neon
+                    vec3 neonGlow = u_tint_color * edge * 4.0 * u_grid; 
+                    
+                    // Additive blending sobre el color final para el envelope
+                    finalColor += neonGlow;
                 }
                 gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
             }
@@ -295,7 +317,7 @@
             uniforms: {
                 tDiffuse: { value: videoTexture },
                 u_intensity: { value: 0.8 },
-                u_grid: { value: 0.5 },
+                u_grid: { value: 0.7 }, // Representa Neon Intensity
                 u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
                 u_flip: { value: 1.0 }, 
                 u_tint_color: { value: new THREE.Vector3(0, 1, 0) } 
@@ -317,8 +339,9 @@
             if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
 
             try {
+                // Solicitando una resolución exageradamente alta (4K) para forzar al celular a dar su max hardware cap
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, 
+                    video: { facingMode: currentFacingMode, width: { ideal: 3840 }, height: { ideal: 2160 } }, 
                     audio: { echoCancellation: true, noiseSuppression: true } 
                 });
                 
@@ -332,15 +355,15 @@
                 video.play().catch(e => console.warn("Autoplay bloqueado:", e));
                 
                 video.onloadedmetadata = () => {
-                    texCanvas.width = video.videoWidth;
-                    texCanvas.height = video.videoHeight;
                     shaderMat.uniforms.u_flip.value = (currentFacingMode === 'user') ? 1.0 : 0.0;
-                    resize();
                     
                     if (!isStreamActive) {
                         isStreamActive = true;
                         drawFrame();
                     }
+                    
+                    // Aplicar resolución real inmediatamente
+                    resize();
 
                     if (isInitialBoot) {
                         document.getElementById('start-screen').style.opacity = '0';
@@ -348,10 +371,9 @@
                             document.getElementById('start-screen').style.display = 'none';
                             document.getElementById('controls-ui').style.display = 'flex';
                             
-                            // Mostrar la barra superior e inferior globales del AR
                             document.getElementById('watermark').style.display = 'block';
                             
-                            swapTribe('UPRM', '#008f39'); // Iniciar con UPRM por defecto
+                            swapTribe('UPRM', '#008f39');
                         }, 400);
                     }
                 };
@@ -362,21 +384,25 @@
             }
         }
 
-        // EL MOTOR COMPOSITOR (Quema el logo en el frame final)
+        // Compositor Dinámico: Ahora escala las tipografías asumiendo que el canvas puede ser gigante (ej. 4K)
         function composeFrameForExport() {
             exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
             exportCtx.textAlign = "center";
             
-            exportCtx.font = "900 24px 'Orbitron', sans-serif";
+            // Scalers automáticos basados en el tamaño de captura, así el texto nunca se ve chiquito
+            let baseSize = exportCanvas.width * 0.06;
+            
+            exportCtx.font = `900 ${baseSize}px 'Orbitron', sans-serif`;
             exportCtx.fillStyle = currentTribeColorHex;
             exportCtx.shadowColor = "rgba(0,0,0,0.9)";
-            exportCtx.shadowBlur = 10;
-            exportCtx.shadowOffsetY = 2;
-            exportCtx.fillText("SANGRE " + currentTribeName, exportCanvas.width / 2, 60);
+            exportCtx.shadowBlur = baseSize * 0.4;
+            exportCtx.shadowOffsetY = baseSize * 0.1;
+            exportCtx.fillText("SANGRE " + currentTribeName, exportCanvas.width / 2, baseSize * 2.5);
 
-            exportCtx.font = "bold 14px sans-serif";
+            let subSize = exportCanvas.width * 0.035;
+            exportCtx.font = `bold ${subSize}px sans-serif`;
             exportCtx.fillStyle = "rgba(255,255,255,0.9)";
-            exportCtx.fillText("SGX JUSTAS CHALLENGE | Spatialgineers x Somos Mayagüez", exportCanvas.width / 2, 80);
+            exportCtx.fillText("SGX JUSTAS CHALLENGE | Spatialgineers x Somos Mayagüez", exportCanvas.width / 2, baseSize * 2.5 + subSize * 1.5);
             
             exportCtx.shadowColor = "transparent";
             exportCtx.shadowBlur = 0;
@@ -388,11 +414,7 @@
             if (!isStreamActive) return;
             requestAnimationFrame(drawFrame);
 
-            if (video.readyState >= video.HAVE_CURRENT_DATA) {
-                texCtx.drawImage(video, 0, 0, texCanvas.width, texCanvas.height);
-                videoTexture.needsUpdate = true;
-            }
-            
+            // Al usar THREE.VideoTexture esto es todo lo que necesitamos, liberando CPU
             renderer.render(scene, camera);
 
             if(isRecording) {
@@ -404,22 +426,17 @@
             currentTribeName = id.toUpperCase();
             currentTribeColorHex = hexColor;
 
-            // 1. Actualizar Variables CSS Globales
             document.documentElement.style.setProperty('--primary', hexColor);
             
-            // 2. Actualizar textos dinámicos
             document.getElementById('tribe-label').innerText = "SANGRE " + currentTribeName;
             document.getElementById('tribe-label').style.textShadow = `0 2px 10px ${hexColor}`;
             
-            // 3. Sincronizar el destello interior del panel Arcade a la tribu elegida
             const board = document.querySelector('.arcade-board');
-            if(board) board.style.boxShadow = `0 0 30px rgba(0,0,0,0.8), inset 0 0 20px ${hexColor}33`; // 33 es 20% opacidad
+            if(board) board.style.boxShadow = `0 0 30px rgba(0,0,0,0.8), inset 0 0 20px ${hexColor}33`; 
             
-            // 4. Inyectar color en el Shader
             const c = hexToRgb(hexColor);
             shaderMat.uniforms.u_tint_color.value.set(c.r, c.g, c.b);
 
-            // 5. Actualizar botones
             document.querySelectorAll('.tribe-btn').forEach(btn => btn.className = "tribe-btn");
             document.getElementById('btn-' + id.toLowerCase()).classList.add('active-' + id.toLowerCase());
         }
@@ -432,7 +449,7 @@
         document.getElementById('sl-int').addEventListener('input', (e) => shaderMat.uniforms.u_intensity.value = parseFloat(e.target.value));
         document.getElementById('sl-scale').addEventListener('input', (e) => shaderMat.uniforms.u_grid.value = parseFloat(e.target.value));
 
-        // FOTO (Compositing Habilitado)
+        // FOTO EXPORT
         document.getElementById('btn-photo').addEventListener('click', () => {
             renderer.render(scene, camera); 
             composeFrameForExport(); 
