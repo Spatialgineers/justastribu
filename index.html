@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SGX AR Identity Filter</title>
+    <title>SGX Representa tu Tribu </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -11,78 +11,112 @@
 
         :root {
             --primary: #008f39; 
-            --glass: rgba(10, 10, 15, 0.65); 
+            --dark: #121212;
+            --text: #f4f4f4;
+            --glass: rgba(10, 10, 12, 0.85);
         }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; touch-action: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
         body { 
-            background-color: #000; 
-            color: #fff; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #050505; 
+            color: var(--text); 
             overflow: hidden; 
-            margin: 0; 
-            touch-action: manipulation; 
-            -webkit-tap-highlight-color: transparent; 
+            display: flex; justify-content: center;
         }
 
         .cyber-font { font-family: 'Orbitron', sans-serif; }
         
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 20; }
-        input[type=range]::-webkit-slider-thumb { 
-            -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
-            background: var(--primary); cursor: pointer; border: 2px solid #000;
-            box-shadow: 0 0 8px var(--primary); margin-top: -6px; transition: transform 0.2s;
-        }
-        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 1px; }
-
         /* EL CONTENEDOR MAESTRO DE FUSIÓN (COMPOSITING) */
         #render-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
         /* El WebGL que vemos en pantalla */
         #webgl-canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
         /* El Canvas Invisible donde quemamos el logo y el 3D para el Export */
         #export-canvas { display: none; }
-        
-        .ui-layer { position: absolute; bottom: 0; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; pointer-events: none; padding-bottom: 25px;}
-        .pointer-events-auto { pointer-events: auto !important; }
 
-        /* BRANDING FIJO VISUAL (Para el HUD, no para la exportación) */
-        #watermark {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            text-align: center; z-index: 50; width: 100%; text-shadow: 0 2px 10px rgba(0,0,0,0.9);
-            pointer-events: none;
+        /* --- ELEMENTOS DE UI TRAÍDOS DEL JUEGO --- */
+
+        .hub-header {
+            position: absolute; top: 0; left: 0; width: 100%; padding: 20px 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+            text-align: center; z-index: 100; pointer-events: none;
         }
-        #watermark h1 { font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; color: var(--primary); margin-bottom: 2px; transition: color 0.3s;}
-        #watermark p { font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.8);}
+        .hub-header h1 { font-size: 22px; margin: 0; text-shadow: 0 2px 10px var(--primary); transition: text-shadow 0.3s; }
+
+        .hub-footer {
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px 0;
+            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+            text-align: center; z-index: 100; font-size: 10px; color: #888;
+            font-weight: bold; letter-spacing: 1px; text-transform: uppercase; pointer-events: none;
+        }
+        .hub-footer span { color: var(--primary); transition: color 0.3s; }
 
         #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5,5,5,0.95); z-index: 1000;
+            background: var(--glass); z-index: 1000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            backdrop-filter: blur(10px); padding: 20px; pointer-events: auto; transition: opacity 0.4s;
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); padding: 20px;
+            pointer-events: auto; transition: opacity 0.4s;
         }
 
-        .sgx-panel { 
-            background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; 
-            padding: 16px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        .action-btn { 
+            width: 100%; max-width: 320px; padding: 18px; margin-top: 10px; 
+            background: transparent; border: 2px solid var(--primary); color: var(--primary); 
+            border-radius: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; 
+            cursor: pointer; transition: 0.2s; box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+        }
+        .action-btn.fill { 
+            background: var(--primary); color: #000; border: none; box-shadow: 0 0 20px rgba(0,143,57,0.4); 
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .action-btn:active { transform: scale(0.96); }
+
+        .arcade-board {
+            background: rgba(0,0,0,0.8); border: 2px solid var(--primary);
+            border-radius: 16px; padding: 20px; width: 100%; max-width: 350px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,143,57,0.2);
+            display: flex; flex-direction: column; transition: border-color 0.3s, box-shadow 0.3s;
+            backdrop-filter: blur(10px); pointer-events: auto;
         }
 
+        .ui-layer { position: absolute; bottom: 0; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; pointer-events: none; padding-bottom: 25px;}
+
+        /* BRANDING FIJO VISUAL */
+        #watermark {
+            position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            text-align: center; z-index: 50; width: 100%; text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+            pointer-events: none;
+        }
+        #watermark h1 { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--text); margin-bottom: 2px; transition: text-shadow 0.3s;}
+
+        /* BOTONES DE TRIBUS REESTILIZADOS */
         .tribe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 15px; }
         .tribe-btn {
-            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
-            font-size: 9px; font-weight: 800; cursor: pointer; color: #888;
-            text-transform: uppercase; padding: 8px 0; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.1); border-radius: 8px;
+            font-size: 10px; font-weight: 900; cursor: pointer; color: #aaa;
+            text-transform: uppercase; padding: 12px 0; transition: 0.2s;
+            backdrop-filter: blur(5px);
         }
-        .tribe-btn.active-uprm { border-color: #008f39; color: #008f39; background: rgba(0,143,57,0.1); box-shadow: 0 0 10px rgba(0,143,57,0.2); }
-        .tribe-btn.active-inter { border-color: #FDCC0D; color: #FDCC0D; background: rgba(253,204,13,0.1); box-shadow: 0 0 10px rgba(253,204,13,0.2); }
-        .tribe-btn.active-iupi { border-color: #cc0000; color: #cc0000; background: rgba(204,0,0,0.1); box-shadow: 0 0 10px rgba(204,0,0,0.2); }
-        .tribe-btn.active-sagrado { border-color: #ff007f; color: #ff007f; background: rgba(255,0,127,0.1); box-shadow: 0 0 10px rgba(255,0,127,0.2); }
+        .tribe-btn:active { transform: scale(0.96); }
+        .tribe-btn.active-uprm { border-color: #008f39; color: #008f39; box-shadow: 0 0 10px rgba(0,143,57,0.3); background: rgba(0,143,57,0.1); }
+        .tribe-btn.active-inter { border-color: #FDCC0D; color: #FDCC0D; box-shadow: 0 0 10px rgba(253,204,13,0.3); background: rgba(253,204,13,0.1); }
+        .tribe-btn.active-iupi { border-color: #cc0000; color: #cc0000; box-shadow: 0 0 10px rgba(204,0,0,0.3); background: rgba(204,0,0,0.1); }
+        .tribe-btn.active-sagrado { border-color: #ff007f; color: #ff007f; box-shadow: 0 0 10px rgba(255,0,127,0.3); background: rgba(255,0,127,0.1); }
+
+        /* CONTROLES DE CÁMARA Y SLIDERS */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 20; }
+        input[type=range]::-webkit-slider-thumb { 
+            -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
+            background: var(--primary); cursor: pointer; border: 2px solid #000;
+            box-shadow: 0 0 8px var(--primary); margin-top: -6px; transition: transform 0.2s, background 0.3s, box-shadow 0.3s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 1px; }
 
         .cam-controls { display: flex; justify-content: space-evenly; align-items: center; margin-top: 10px; }
-        
         .circle-btn {
             display: flex; align-items: center; justify-content: center;
-            border-radius: 50%; cursor: pointer; transition: transform 0.15s ease, background 0.3s ease;
+            border-radius: 50%; cursor: pointer; transition: transform 0.15s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
             outline: none; -webkit-tap-highlight-color: transparent;
         }
         .circle-btn:active { transform: scale(0.9); }
@@ -105,28 +139,32 @@
     <canvas id="texture-canvas" style="display: none;"></canvas>
 
     <div id="render-container">
-        </div>
+    </div>
     
     <canvas id="export-canvas"></canvas>
 
     <div id="start-screen">
-        <h1 class="cyber-font text-3xl text-center text-white mb-2 drop-shadow-lg">SGX STORY AR</h1>
-        <p class="text-xs text-gray-400 text-center mb-8 tracking-widest uppercase">FILTRO DE IDENTIDAD TRIBAL</p>
-        <button id="btn-init" class="w-full max-w-xs bg-white text-black font-black py-4 rounded-full uppercase tracking-widest hover:bg-gray-200 transition-transform active:scale-95">
+        <div class="hub-header"><h1 class="cyber-font">SGX Justas</h1></div>
+        
+        <h1 class="cyber-font" style="font-size: 28px; text-transform: uppercase; color: var(--primary); margin-bottom: 5px; text-align: center; letter-spacing: 1px; transition: color 0.3s;">Filtro AR</h1>
+        <p style="color: #aaa; margin-bottom: 30px; font-size: 13px; text-align: center; line-height: 1.5;">Selecciona tu tribu y activa la cámara</p>
+        
+        <button id="btn-init" class="action-btn fill">
             ACTIVAR CÁMARA
         </button>
-        <p class="text-[9px] text-gray-500 mt-6 text-center uppercase tracking-widest">Requiere acceso a micrófono y cámara</p>
+        <p style="font-size: 10px; color: #555; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; text-align: center;">Requiere acceso a micrófono y cámara</p>
+        
+        <div class="hub-footer">Powered by <span>Spatialgineers</span><br>in collaboration with <span>Somos Mayagüez</span></div>
     </div>
 
     <div id="watermark" style="display: none;">
         <h1 id="tribe-label" class="cyber-font">SANGRE COLEGIO</h1>
-        <p>Spatialgineers x Somos Mayagüez</p>
     </div>
 
     <div id="rec-indicator"></div>
 
     <div id="controls-ui" class="ui-layer px-4" style="display: none;">
-        <div class="pointer-events-auto sgx-panel max-w-sm mx-auto w-full">
+        <div class="arcade-board mx-auto w-full">
             <div class="tribe-grid">
                 <button class="tribe-btn" id="btn-uprm" onclick="swapTribe('UPRM', '#008f39')">UPRM</button>
                 <button class="tribe-btn" id="btn-inter" onclick="swapTribe('Inter', '#FDCC0D')">INTER</button>
@@ -136,11 +174,11 @@
 
             <div class="grid grid-cols-2 gap-6 pb-2 mb-2 px-2">
                 <div>
-                    <div class="flex justify-between text-[8px] font-bold text-gray-400 mb-1 tracking-wider"><label>TINT</label></div>
+                    <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-1 tracking-wider uppercase"><label>TINT</label></div>
                     <input type="range" id="sl-int" min="0" max="1" step="0.05" value="0.8">
                 </div>
                 <div>
-                    <div class="flex justify-between text-[8px] font-bold text-gray-400 mb-1 tracking-wider"><label>GRID</label></div>
+                    <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-1 tracking-wider uppercase"><label>GRID</label></div>
                     <input type="range" id="sl-scale" min="0.0" max="1" step="0.05" value="0.5">
                 </div>
             </div>
@@ -168,7 +206,7 @@
         
         let isStreamActive = false;
         let currentFacingMode = 'user'; 
-        let audioStream = null; // Para guardar la pista del micrófono
+        let audioStream = null; 
 
         let currentTribeName = "COLEGIO";
         let currentTribeColorHex = "#008f39";
@@ -195,7 +233,6 @@
             const height = window.innerHeight;
             renderer.setSize(width, height);
             
-            // Sincronizar resoluciones de exportación
             exportCanvas.width = width;
             exportCanvas.height = height;
 
@@ -280,7 +317,6 @@
             if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
 
             try {
-                // EXTREMADAMENTE IMPORTANTE: Pedimos video Y audio explícitamente para el Micrófono
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, 
                     audio: { echoCancellation: true, noiseSuppression: true } 
@@ -289,7 +325,6 @@
                 currentStream = stream;
                 video.srcObject = stream;
                 
-                // Extraer y guardar pista de audio para el export final
                 if (stream.getAudioTracks().length > 0) {
                     audioStream = new MediaStream([stream.getAudioTracks()[0]]);
                 }
@@ -312,8 +347,11 @@
                         setTimeout(() => {
                             document.getElementById('start-screen').style.display = 'none';
                             document.getElementById('controls-ui').style.display = 'flex';
+                            
+                            // Mostrar la barra superior e inferior globales del AR
                             document.getElementById('watermark').style.display = 'block';
-                            swapTribe('UPRM', '#008f39');
+                            
+                            swapTribe('UPRM', '#008f39'); // Iniciar con UPRM por defecto
                         }, 400);
                     }
                 };
@@ -326,13 +364,9 @@
 
         // EL MOTOR COMPOSITOR (Quema el logo en el frame final)
         function composeFrameForExport() {
-            // 1. Dibuja el frame 3D
             exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
-            
-            // 2. Dibuja el Watermark encima del Canvas Exportador
             exportCtx.textAlign = "center";
             
-            // Logo Tribu
             exportCtx.font = "900 24px 'Orbitron', sans-serif";
             exportCtx.fillStyle = currentTribeColorHex;
             exportCtx.shadowColor = "rgba(0,0,0,0.9)";
@@ -340,12 +374,10 @@
             exportCtx.shadowOffsetY = 2;
             exportCtx.fillText("SANGRE " + currentTribeName, exportCanvas.width / 2, 60);
 
-            // Subtítulo
             exportCtx.font = "bold 14px sans-serif";
             exportCtx.fillStyle = "rgba(255,255,255,0.9)";
             exportCtx.fillText("SGX JUSTAS CHALLENGE | Spatialgineers x Somos Mayagüez", exportCanvas.width / 2, 80);
             
-            // Reset shadow para no afectar próximos frames
             exportCtx.shadowColor = "transparent";
             exportCtx.shadowBlur = 0;
         }
@@ -363,7 +395,6 @@
             
             renderer.render(scene, camera);
 
-            // Solo quema el canvas de exportación si estamos grabando para salvar batería
             if(isRecording) {
                 composeFrameForExport();
             }
@@ -373,12 +404,22 @@
             currentTribeName = id.toUpperCase();
             currentTribeColorHex = hexColor;
 
+            // 1. Actualizar Variables CSS Globales
             document.documentElement.style.setProperty('--primary', hexColor);
-            document.getElementById('tribe-label').innerText = "SANGRE " + currentTribeName;
             
+            // 2. Actualizar textos dinámicos
+            document.getElementById('tribe-label').innerText = "SANGRE " + currentTribeName;
+            document.getElementById('tribe-label').style.textShadow = `0 2px 10px ${hexColor}`;
+            
+            // 3. Sincronizar el destello interior del panel Arcade a la tribu elegida
+            const board = document.querySelector('.arcade-board');
+            if(board) board.style.boxShadow = `0 0 30px rgba(0,0,0,0.8), inset 0 0 20px ${hexColor}33`; // 33 es 20% opacidad
+            
+            // 4. Inyectar color en el Shader
             const c = hexToRgb(hexColor);
             shaderMat.uniforms.u_tint_color.value.set(c.r, c.g, c.b);
 
+            // 5. Actualizar botones
             document.querySelectorAll('.tribe-btn').forEach(btn => btn.className = "tribe-btn");
             document.getElementById('btn-' + id.toLowerCase()).classList.add('active-' + id.toLowerCase());
         }
@@ -394,7 +435,7 @@
         // FOTO (Compositing Habilitado)
         document.getElementById('btn-photo').addEventListener('click', () => {
             renderer.render(scene, camera); 
-            composeFrameForExport(); // Quemar el logo
+            composeFrameForExport(); 
             
             const dataURL = exportCanvas.toDataURL('image/jpeg', 0.95);
             const a = document.createElement('a');
@@ -424,28 +465,23 @@
             }
 
             recordedChunks = [];
-            
-            // 1. Extraer Stream Visual del Compositor (Con Logo) a 30 FPS
             isRecording = true;
             const visualStream = exportCanvas.captureStream(30);
             
-            // 2. FUSIÓN (Merge) de Audio y Video
             let combinedStream = visualStream;
             if (audioStream) {
-                // Combina el track de video del canvas con el track de audio del micrófono
                 combinedStream = new MediaStream([
                     ...visualStream.getVideoTracks(),
                     ...audioStream.getAudioTracks()
                 ]);
             }
 
-            // 3. Negociación del Formato (MP4 prioritario)
-            let mimeType = 'video/mp4'; // Ideal para iOS/Safari
+            let mimeType = 'video/mp4'; 
             let fileExt = 'mp4';
             
             if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'video/webm; codecs=vp9,opus'; // Alta calidad Chrome/Android
-                fileExt = 'mp4'; // El truco "Sucio": Forzamos extensión mp4 aunque sea webm para facilitar subida a redes. Instagram lee el header interno como quiera.
+                mimeType = 'video/webm; codecs=vp9,opus'; 
+                fileExt = 'mp4'; 
                 if (!MediaRecorder.isTypeSupported(mimeType)) {
                     mimeType = 'video/webm'; 
                 }
