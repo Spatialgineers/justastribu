@@ -65,6 +65,7 @@
             transition: background 0.3s, box-shadow 0.3s;
         }
         .action-btn:active { transform: scale(0.96); }
+        .action-btn:disabled { opacity: 0.5; pointer-events: none; }
 
         .arcade-board {
             background: rgba(0,0,0,0.8); border: 2px solid var(--primary);
@@ -191,7 +192,7 @@
         // --- 1. CORE DOM ---
         const video = document.getElementById('camera-feed');
         const texCanvas = document.getElementById('texture-canvas');
-        const texCtx = texCanvas.getContext('2d', { willReadFrequently: true }); // Magia del Temporal App
+        const texCtx = texCanvas.getContext('2d', { willReadFrequently: true });
         const renderContainer = document.getElementById('render-container');
         
         const exportCanvas = document.getElementById('export-canvas');
@@ -209,12 +210,12 @@
             return result ? { r: parseInt(result[1], 16)/255, g: parseInt(result[2], 16)/255, b: parseInt(result[3], 16)/255 } : { r:1, g:1, b:1 };
         }
 
-        // --- 2. UBERSHADER SETUP (Estilo Temporal App) ---
+        // --- 2. UBERSHADER SETUP ---
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
         
         const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
-        renderer.setPixelRatio(window.devicePixelRatio); // Seguro a 720p
+        renderer.setPixelRatio(window.devicePixelRatio);
         renderer.domElement.id = 'webgl-canvas';
         renderContainer.appendChild(renderer.domElement);
 
@@ -227,7 +228,6 @@
             const height = window.innerHeight;
             renderer.setSize(width, height);
             
-            // Ajustamos el canvas de exportación a la resolución nativa de la cámara 
             if (video.videoWidth > 0) {
                 exportCanvas.width = video.videoWidth;
                 exportCanvas.height = video.videoHeight;
@@ -242,7 +242,6 @@
 
         const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
-        // EL EFECTO "2030 NEURAL AR" DEL TEMPORAL APP ADAPTADO
         const fragmentShader = `
             uniform sampler2D tDiffuse;
             uniform float u_intensity;
@@ -261,7 +260,6 @@
                 vec3 color = texture2D(tDiffuse, uv).rgb;
                 vec3 finalColor = color;
 
-                // Neural AR / Edge Dot-Grid Effect from 2030
                 vec2 texel = (1.0 / u_resolution) * u_scale * 2.0;
                 
                 float s00 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1, -1)).rgb);
@@ -270,7 +268,6 @@
                 float s20 = getLuma(texture2D(tDiffuse, uv + texel * vec2(1, -1)).rgb);
                 float edge = abs(s00 - s22) + abs(s02 - s20);
                 
-                // Aspect Ratio Corrected Dots
                 vec2 aspectUv = uv;
                 aspectUv.x *= u_resolution.x / u_resolution.y; 
                 
@@ -278,11 +275,9 @@
                 vec2 cellCenter = fract(gridUv) - 0.5; 
                 float dotGrid = 1.0 - step(0.15, length(cellCenter));
                 
-                // Apply Tribe Tint to the AR Glow
                 vec3 arGlow = u_tint_color * edge * 5.0; 
                 vec3 baseDark = color * (1.0 - (0.5 * u_intensity)); 
                 
-                // Integrate dots (using a dark version of the tribe color for the grid background)
                 vec3 dotTint = mix(vec3(0.1, 0.1, 0.1), u_tint_color, 0.2);
                 
                 finalColor = mix(color, baseDark + arGlow + dotTint * dotGrid, u_intensity);
@@ -308,8 +303,10 @@
 
         let currentStream = null;
 
-        document.getElementById('btn-init').addEventListener('click', () => {
-            document.getElementById('btn-init').innerText = "CONECTANDO...";
+        // FIX ANTI-SPAM PARA EL BOTON
+        document.getElementById('btn-init').addEventListener('click', (e) => {
+            e.target.disabled = true; // Evita el doble click mientras pide permiso
+            e.target.innerText = "CONECTANDO...";
             startCamera(true); 
         });
 
@@ -317,21 +314,18 @@
             if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
 
             try {
-                // Configuración exacta del Temporal Visualizer (720p es el sweet spot del rendimiento en AR Web)
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, 
                     audio: { echoCancellation: true, noiseSuppression: true } 
                 });
                 
                 currentStream = stream;
-                video.srcObject = stream;
                 
                 if (stream.getAudioTracks().length > 0) {
                     audioStream = new MediaStream([stream.getAudioTracks()[0]]);
                 }
                 
-                await video.play().catch(e => console.warn("Autoplay bloqueado:", e));
-                
+                // FIX DE RACE CONDITION: Asignamos el evento ANTES de conectar el stream
                 video.onloadedmetadata = () => {
                     texCanvas.width = video.videoWidth;
                     texCanvas.height = video.videoHeight;
@@ -355,20 +349,24 @@
                         }, 400);
                     }
                 };
+
+                // Ahora sí conectamos el stream y le damos play
+                video.srcObject = stream;
+                video.play().catch(e => console.warn("Autoplay bloqueado:", e));
+                
             } catch (err) {
                 console.error(err);
-                alert("Error crítico. Permite acceso al Micrófono y Cámara en tu navegador.");
-                document.getElementById('btn-init').innerText = "REINTENTAR";
+                alert("Error al conectar la cámara. Verifica los permisos de tu navegador.");
+                const btn = document.getElementById('btn-init');
+                btn.innerText = "REINTENTAR";
+                btn.disabled = false; // Lo volvemos a encender si falló
             }
         }
 
-        // COMPOSITOR DEL WATERMARK A PRUEBA DE FALLOS
         function drawWatermarkToExport() {
-            // El ancho dinámico evita que el texto se salga de la pantalla sin importar si es horizontal o vertical
             const cw = exportCanvas.width;
             const ch = exportCanvas.height;
             
-            // Máximos seguros
             const maxTitleSize = Math.min(cw * 0.07, 60); 
             const maxSubSize = Math.min(cw * 0.03, 24);
             const marginY = ch * 0.08;
@@ -388,7 +386,6 @@
             exportCtx.shadowBlur = 5;
             exportCtx.fillText("SGX JUSTAS CHALLENGE", cw / 2, marginY + maxTitleSize);
             
-            // Apagamos la sombra para que no afecte futuros frames
             exportCtx.shadowColor = "transparent";
             exportCtx.shadowBlur = 0;
         }
@@ -399,16 +396,13 @@
             if (!isStreamActive) return;
             requestAnimationFrame(drawFrame);
 
-            // 1. Pipeline del Temporal App: Video -> TexCanvas -> Texture Update
             if (video.readyState >= video.HAVE_CURRENT_DATA) {
                 texCtx.drawImage(video, 0, 0, texCanvas.width, texCanvas.height);
                 videoTexture.needsUpdate = true;
             }
 
-            // 2. Renderizar a THREE
             renderer.render(scene, camera);
 
-            // 3. Grabar frame directo en canvas de exportación si está grabando
             if(isRecording) {
                 exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
                 drawWatermarkToExport();
@@ -445,7 +439,6 @@
         document.getElementById('btn-photo').addEventListener('click', () => {
             renderer.render(scene, camera); 
             
-            // Estampar en resolucion completa
             exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
             drawWatermarkToExport();
             
@@ -462,7 +455,6 @@
             setTimeout(() => document.body.removeChild(flash), 350);
         });
 
-        // MEDIA RECORDER CON INTEGRACIÓN DE AUDIO PERFECTA
         let mediaRecorder;
         let recordedChunks = [];
         const btnRecord = document.getElementById('btn-record');
@@ -479,11 +471,9 @@
             recordedChunks = [];
             isRecording = true;
             
-            // Capturar el stream visual a 30fps
             const visualStream = exportCanvas.captureStream(30);
             
             let combinedStream = visualStream;
-            // Pegar el audio si la cámara lo autorizó
             if (audioStream && audioStream.getAudioTracks().length > 0) {
                 combinedStream = new MediaStream([
                     ...visualStream.getVideoTracks(),
@@ -502,7 +492,6 @@
                 }
             }
 
-            // Usando la configuración estandar
             mediaRecorder = new MediaRecorder(combinedStream, { mimeType: mimeType });
             
             mediaRecorder.ondataavailable = (e) => { 
