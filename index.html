@@ -29,10 +29,7 @@
         
         #render-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
         #webgl-canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
-        
-        /* Ocultos según referencia */
-        #camera-feed { display: none; }
-        #texture-canvas { display: none; }
+        #export-canvas { display: none; }
 
         .hub-header {
             position: absolute; top: 0; left: 0; width: 100%; padding: 20px 0;
@@ -78,6 +75,13 @@
         }
 
         .ui-layer { position: absolute; bottom: 0; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; pointer-events: none; padding-bottom: 25px;}
+
+        #watermark {
+            position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            text-align: center; z-index: 50; width: 100%; text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+            pointer-events: none;
+        }
+        #watermark h1 { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--text); margin-bottom: 2px; transition: text-shadow 0.3s;}
 
         .tribe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 15px; }
         .tribe-btn {
@@ -127,10 +131,12 @@
 </head>
 <body>
 
-    <video id="camera-feed" autoplay playsinline muted></video>
-    <canvas id="texture-canvas"></canvas>
+    <div id="render-container">
+        <video id="camera-feed" style="display: none;" autoplay playsinline muted></video>
+        <canvas id="texture-canvas" style="display: none;"></canvas>
+    </div>
     
-    <div id="render-container"></div>
+    <canvas id="export-canvas"></canvas>
 
     <div id="start-screen">
         <div class="hub-header"><h1 class="cyber-font">SGX Justas</h1></div>
@@ -139,6 +145,10 @@
         <button id="btn-init" class="action-btn fill">ACTIVAR CÁMARA</button>
         <p style="font-size: 10px; color: #555; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; text-align: center;">Requiere acceso a micrófono y cámara</p>
         <div class="hub-footer">Powered by <span>Spatialgineers</span><br>in collaboration with <span>Somos Mayagüez</span></div>
+    </div>
+
+    <div id="watermark" style="display: none;">
+        <h1 id="tribe-label" class="cyber-font">SANGRE COLEGIO</h1>
     </div>
 
     <div id="rec-indicator"></div>
@@ -163,7 +173,7 @@
                 </div>
                 <div>
                     <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-1 tracking-wider uppercase"><label>NEON</label></div>
-                    <input type="range" id="sl-scale" min="0.0" max="1" step="0.05" value="0.7">
+                    <input type="range" id="sl-scale" min="0.1" max="2" step="0.1" value="1.0">
                 </div>
             </div>
 
@@ -181,8 +191,11 @@
         // --- 1. CORE DOM ---
         const video = document.getElementById('camera-feed');
         const texCanvas = document.getElementById('texture-canvas');
-        const texCtx = texCanvas.getContext('2d', { willReadFrequently: true });
+        const texCtx = texCanvas.getContext('2d', { willReadFrequently: true }); // Magia del Temporal App
         const renderContainer = document.getElementById('render-container');
+        
+        const exportCanvas = document.getElementById('export-canvas');
+        const exportCtx = exportCanvas.getContext('2d', { alpha: false });
         
         let isStreamActive = false;
         let currentFacingMode = 'user'; 
@@ -196,11 +209,12 @@
             return result ? { r: parseInt(result[1], 16)/255, g: parseInt(result[2], 16)/255, b: parseInt(result[3], 16)/255 } : { r:1, g:1, b:1 };
         }
 
-        // --- 2. UBERSHADER SETUP (Igual al de referencia) ---
+        // --- 2. UBERSHADER SETUP (Estilo Temporal App) ---
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        
         const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(window.devicePixelRatio); // Seguro a 720p
         renderer.domElement.id = 'webgl-canvas';
         renderContainer.appendChild(renderer.domElement);
 
@@ -208,73 +222,31 @@
         videoTexture.minFilter = THREE.LinearFilter;
         videoTexture.magFilter = THREE.LinearFilter;
 
-        // --- 3. NUEVO SISTEMA DE WATERMARK EN GPU ---
-        // Dibujamos el texto en un canvas invisible y lo metemos como textura 3D
-        const wmCanvas = document.createElement('canvas');
-        const wmCtx = wmCanvas.getContext('2d', { alpha: true });
-        const wmTexture = new THREE.CanvasTexture(wmCanvas);
-        wmTexture.minFilter = THREE.LinearFilter;
-        wmTexture.magFilter = THREE.LinearFilter;
-        
-        // Colocamos el texto frente a la cámara (Z=0.1)
-        const wmMaterial = new THREE.MeshBasicMaterial({ map: wmTexture, transparent: true });
-        const wmMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), wmMaterial);
-        wmMesh.position.z = 0.1; 
-        scene.add(wmMesh);
-
-        function updateWatermark() {
-            if(wmCanvas.width === 0) return;
-            wmCtx.clearRect(0, 0, wmCanvas.width, wmCanvas.height);
-            wmCtx.textAlign = "center";
-            
-            // Texto escalado a la resolución nativa de la ventana
-            let w = wmCanvas.width;
-            let baseSize = w * 0.055;
-            let topOffset = baseSize * 2.5;
-
-            // Sombra y estilo del texto
-            wmCtx.shadowColor = "rgba(0,0,0,0.9)";
-            wmCtx.shadowBlur = baseSize * 0.4;
-            wmCtx.shadowOffsetY = baseSize * 0.1;
-            
-            // SANGRE TRIBU
-            wmCtx.font = `900 ${baseSize}px 'Orbitron', sans-serif`;
-            wmCtx.fillStyle = currentTribeColorHex;
-            wmCtx.fillText("SANGRE " + currentTribeName, w / 2, topOffset);
-
-            // Subtitulo más pequeño en 2 líneas para que no se salga de pantalla
-            let subSize = w * 0.025; 
-            wmCtx.font = `bold ${subSize}px sans-serif`;
-            wmCtx.fillStyle = "rgba(255,255,255,0.9)";
-            wmCtx.shadowBlur = baseSize * 0.2; 
-            
-            wmCtx.fillText("SGX JUSTAS CHALLENGE", w / 2, topOffset + subSize * 1.8);
-            wmCtx.fillText("Spatialgineers x Somos Mayagüez", w / 2, topOffset + subSize * 3.2);
-
-            wmTexture.needsUpdate = true;
-        }
-
         function resize() {
             const width = window.innerWidth;
             const height = window.innerHeight;
-            renderer.setSize(width, height); 
+            renderer.setSize(width, height);
             
-            // Ajustamos el canvas del watermark a la resolución de la pantalla
-            wmCanvas.width = width;
-            wmCanvas.height = height;
-            
+            // Ajustamos el canvas de exportación a la resolución nativa de la cámara 
+            if (video.videoWidth > 0) {
+                exportCanvas.width = video.videoWidth;
+                exportCanvas.height = video.videoHeight;
+            } else {
+                exportCanvas.width = width;
+                exportCanvas.height = height;
+            }
+
             if(shaderMat) shaderMat.uniforms.u_resolution.value.set(width, height);
-            
-            updateWatermark();
         }
         window.addEventListener('resize', resize);
 
         const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
+        // EL EFECTO "2030 NEURAL AR" DEL TEMPORAL APP ADAPTADO
         const fragmentShader = `
             uniform sampler2D tDiffuse;
             uniform float u_intensity;
-            uniform float u_grid; 
+            uniform float u_scale; 
             uniform vec2 u_resolution;
             uniform float u_flip;
             uniform vec3 u_tint_color;
@@ -282,37 +254,39 @@
 
             float getLuma(vec3 color) { return dot(color, vec3(0.299, 0.587, 0.114)); }
             
-            vec3 rgbSplit(sampler2D tex, vec2 uv, float splitAmount) {
-                float r = texture2D(tex, vec2(uv.x + splitAmount, uv.y)).r;
-                float g = texture2D(tex, uv).g;
-                float b = texture2D(tex, vec2(uv.x - splitAmount, uv.y)).b;
-                return vec3(r, g, b);
-            }
-
             void main() {
                 vec2 uv = vUv;
                 if(u_flip > 0.5) uv.x = 1.0 - uv.x;
 
-                vec3 finalColor = rgbSplit(tDiffuse, uv, 0.005 * u_intensity);
-                finalColor = (finalColor - 0.5) * (1.0 + 0.4 * u_intensity) + 0.5;
+                vec3 color = texture2D(tDiffuse, uv).rgb;
+                vec3 finalColor = color;
+
+                // Neural AR / Edge Dot-Grid Effect from 2030
+                vec2 texel = (1.0 / u_resolution) * u_scale * 2.0;
                 
-                float luma = getLuma(finalColor);
-                vec3 tribalTint = mix(finalColor, finalColor * u_tint_color * 2.5, u_intensity);
-                finalColor = mix(tribalTint, finalColor, smoothstep(0.6, 1.0, luma));
-
-                // 4-Tap Diet Sobel (Extremadamente liviano para el GPU)
-                if (u_grid > 0.0) {
-                    vec2 texel = 2.0 / u_resolution; 
-                    
-                    float l1 = getLuma(texture2D(tDiffuse, uv + vec2(-texel.x, -texel.y)).rgb);
-                    float l2 = getLuma(texture2D(tDiffuse, uv + vec2( texel.x, -texel.y)).rgb);
-                    float l3 = getLuma(texture2D(tDiffuse, uv + vec2(-texel.x,  texel.y)).rgb);
-                    float l4 = getLuma(texture2D(tDiffuse, uv + vec2( texel.x,  texel.y)).rgb);
-
-                    float edge = sqrt(pow(l1 - l4, 2.0) + pow(l2 - l3, 2.0)) * 2.0;
-                    vec3 neonGlow = u_tint_color * edge * 3.5 * u_grid; 
-                    finalColor += neonGlow;
-                }
+                float s00 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1, -1)).rgb);
+                float s22 = getLuma(texture2D(tDiffuse, uv + texel * vec2(1, 1)).rgb);
+                float s02 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1, 1)).rgb);
+                float s20 = getLuma(texture2D(tDiffuse, uv + texel * vec2(1, -1)).rgb);
+                float edge = abs(s00 - s22) + abs(s02 - s20);
+                
+                // Aspect Ratio Corrected Dots
+                vec2 aspectUv = uv;
+                aspectUv.x *= u_resolution.x / u_resolution.y; 
+                
+                vec2 gridUv = aspectUv * 120.0 * u_scale; 
+                vec2 cellCenter = fract(gridUv) - 0.5; 
+                float dotGrid = 1.0 - step(0.15, length(cellCenter));
+                
+                // Apply Tribe Tint to the AR Glow
+                vec3 arGlow = u_tint_color * edge * 5.0; 
+                vec3 baseDark = color * (1.0 - (0.5 * u_intensity)); 
+                
+                // Integrate dots (using a dark version of the tribe color for the grid background)
+                vec3 dotTint = mix(vec3(0.1, 0.1, 0.1), u_tint_color, 0.2);
+                
+                finalColor = mix(color, baseDark + arGlow + dotTint * dotGrid, u_intensity);
+                
                 gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
             }
         `;
@@ -321,7 +295,7 @@
             uniforms: {
                 tDiffuse: { value: videoTexture },
                 u_intensity: { value: 0.8 },
-                u_grid: { value: 0.7 }, 
+                u_scale: { value: 1.0 }, 
                 u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
                 u_flip: { value: 1.0 }, 
                 u_tint_color: { value: new THREE.Vector3(0, 1, 0) } 
@@ -330,9 +304,7 @@
             fragmentShader: fragmentShader
         });
 
-        // El video siempre está detrás (Z=0)
-        const videoMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shaderMat);
-        scene.add(videoMesh);
+        scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shaderMat));
 
         let currentStream = null;
 
@@ -345,7 +317,7 @@
             if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
 
             try {
-                // Resolución idéntica al app de Story Time (720p)
+                // Configuración exacta del Temporal Visualizer (720p es el sweet spot del rendimiento en AR Web)
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, 
                     audio: { echoCancellation: true, noiseSuppression: true } 
@@ -358,26 +330,27 @@
                     audioStream = new MediaStream([stream.getAudioTracks()[0]]);
                 }
                 
-                video.play().catch(e => console.warn("Autoplay bloqueado:", e));
+                await video.play().catch(e => console.warn("Autoplay bloqueado:", e));
                 
                 video.onloadedmetadata = () => {
                     texCanvas.width = video.videoWidth;
                     texCanvas.height = video.videoHeight;
                     
                     shaderMat.uniforms.u_flip.value = (currentFacingMode === 'user') ? 1.0 : 0.0;
+                    resize();
                     
                     if (!isStreamActive) {
                         isStreamActive = true;
                         drawFrame();
                     }
-                    
-                    resize();
 
                     if (isInitialBoot) {
                         document.getElementById('start-screen').style.opacity = '0';
                         setTimeout(() => {
                             document.getElementById('start-screen').style.display = 'none';
                             document.getElementById('controls-ui').style.display = 'flex';
+                            document.getElementById('watermark').style.display = 'block';
+                            
                             swapTribe('UPRM', '#008f39');
                         }, 400);
                     }
@@ -389,17 +362,57 @@
             }
         }
 
-        // Loop súper liviano (Igual a la referencia)
+        // COMPOSITOR DEL WATERMARK A PRUEBA DE FALLOS
+        function drawWatermarkToExport() {
+            // El ancho dinámico evita que el texto se salga de la pantalla sin importar si es horizontal o vertical
+            const cw = exportCanvas.width;
+            const ch = exportCanvas.height;
+            
+            // Máximos seguros
+            const maxTitleSize = Math.min(cw * 0.07, 60); 
+            const maxSubSize = Math.min(cw * 0.03, 24);
+            const marginY = ch * 0.08;
+
+            exportCtx.textAlign = "center";
+            exportCtx.textBaseline = "middle";
+            
+            exportCtx.font = `900 ${maxTitleSize}px 'Orbitron', sans-serif`;
+            exportCtx.fillStyle = currentTribeColorHex;
+            exportCtx.shadowColor = "rgba(0,0,0,0.9)";
+            exportCtx.shadowBlur = 10;
+            exportCtx.shadowOffsetY = 2;
+            exportCtx.fillText("SANGRE " + currentTribeName, cw / 2, marginY);
+
+            exportCtx.font = `bold ${maxSubSize}px sans-serif`;
+            exportCtx.fillStyle = "rgba(255,255,255,0.9)";
+            exportCtx.shadowBlur = 5;
+            exportCtx.fillText("SGX JUSTAS CHALLENGE", cw / 2, marginY + maxTitleSize);
+            
+            // Apagamos la sombra para que no afecte futuros frames
+            exportCtx.shadowColor = "transparent";
+            exportCtx.shadowBlur = 0;
+        }
+
+        let isRecording = false;
+
         function drawFrame() {
             if (!isStreamActive) return;
             requestAnimationFrame(drawFrame);
 
+            // 1. Pipeline del Temporal App: Video -> TexCanvas -> Texture Update
             if (video.readyState >= video.HAVE_CURRENT_DATA) {
                 texCtx.drawImage(video, 0, 0, texCanvas.width, texCanvas.height);
                 videoTexture.needsUpdate = true;
             }
 
+            // 2. Renderizar a THREE
             renderer.render(scene, camera);
+
+            // 3. Grabar frame directo en canvas de exportación si está grabando
+            if(isRecording) {
+                exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
+                drawWatermarkToExport();
+            }
         }
 
         function swapTribe(id, hexColor) {
@@ -407,6 +420,9 @@
             currentTribeColorHex = hexColor;
 
             document.documentElement.style.setProperty('--primary', hexColor);
+            
+            document.getElementById('tribe-label').innerText = "SANGRE " + currentTribeName;
+            document.getElementById('tribe-label').style.textShadow = `0 2px 10px ${hexColor}`;
             
             const board = document.querySelector('.arcade-board');
             if(board) board.style.boxShadow = `0 0 30px rgba(0,0,0,0.8), inset 0 0 20px ${hexColor}33`; 
@@ -416,8 +432,6 @@
 
             document.querySelectorAll('.tribe-btn').forEach(btn => btn.className = "tribe-btn");
             document.getElementById('btn-' + id.toLowerCase()).classList.add('active-' + id.toLowerCase());
-
-            updateWatermark();
         }
 
         document.getElementById('btn-flip').addEventListener('click', () => {
@@ -426,13 +440,16 @@
         });
 
         document.getElementById('sl-int').addEventListener('input', (e) => shaderMat.uniforms.u_intensity.value = parseFloat(e.target.value));
-        document.getElementById('sl-scale').addEventListener('input', (e) => shaderMat.uniforms.u_grid.value = parseFloat(e.target.value));
+        document.getElementById('sl-scale').addEventListener('input', (e) => shaderMat.uniforms.u_scale.value = parseFloat(e.target.value));
 
-        // EXPORT: Foto directa del GPU (ya tiene el texto quemado arriba)
         document.getElementById('btn-photo').addEventListener('click', () => {
             renderer.render(scene, camera); 
             
-            const dataURL = renderer.domElement.toDataURL('image/jpeg', 0.95);
+            // Estampar en resolucion completa
+            exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
+            drawWatermarkToExport();
+            
+            const dataURL = exportCanvas.toDataURL('image/jpeg', 0.95);
             const a = document.createElement('a');
             a.href = dataURL;
             a.download = `SGX_Sangre_${currentTribeName}_${Date.now()}.jpg`;
@@ -445,7 +462,7 @@
             setTimeout(() => document.body.removeChild(flash), 350);
         });
 
-        // GRABACIÓN DIRECTA DE WEBGL: Cero estrés al CPU (Igual al Story Time)
+        // MEDIA RECORDER CON INTEGRACIÓN DE AUDIO PERFECTA
         let mediaRecorder;
         let recordedChunks = [];
         const btnRecord = document.getElementById('btn-record');
@@ -453,17 +470,21 @@
         btnRecord.addEventListener('click', () => {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
+                isRecording = false;
                 btnRecord.classList.remove('recording'); 
                 document.getElementById('rec-indicator').style.display = 'none';
                 return;
             }
 
             recordedChunks = [];
-            // Aquí está la magia: capturamos el GPU, sin exportCanvas
-            const visualStream = renderer.domElement.captureStream(30);
+            isRecording = true;
+            
+            // Capturar el stream visual a 30fps
+            const visualStream = exportCanvas.captureStream(30);
             
             let combinedStream = visualStream;
-            if (audioStream) {
+            // Pegar el audio si la cámara lo autorizó
+            if (audioStream && audioStream.getAudioTracks().length > 0) {
                 combinedStream = new MediaStream([
                     ...visualStream.getVideoTracks(),
                     ...audioStream.getAudioTracks()
@@ -472,14 +493,21 @@
 
             let mimeType = 'video/mp4'; 
             let fileExt = 'mp4';
+            
             if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'video/webm; codecs=vp9'; 
-                fileExt = 'webm'; 
-                if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm'; 
+                mimeType = 'video/webm; codecs=vp9,opus'; 
+                fileExt = 'mp4'; 
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'video/webm'; 
+                }
             }
 
+            // Usando la configuración estandar
             mediaRecorder = new MediaRecorder(combinedStream, { mimeType: mimeType });
-            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+            
+            mediaRecorder.ondataavailable = (e) => { 
+                if (e.data.size > 0) recordedChunks.push(e.data); 
+            };
 
             mediaRecorder.onstop = () => {
                 const blob = new Blob(recordedChunks, { type: mimeType });
@@ -494,11 +522,10 @@
             };
 
             mediaRecorder.start();
+            
             btnRecord.classList.add('recording'); 
             document.getElementById('rec-indicator').style.display = 'block';
         });
-
-        resize();
     </script>
 </body>
 </html>
