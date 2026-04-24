@@ -189,10 +189,10 @@
         const video = document.getElementById('camera-feed');
         const renderContainer = document.getElementById('render-container');
         
+        // Optimización: Quitamos willReadFrequently para permitir GPU Hardware Acceleration en Safari
         const exportCanvas = document.getElementById('export-canvas');
-        const exportCtx = exportCanvas.getContext('2d', { alpha: false, willReadFrequently: true });
+        const exportCtx = exportCanvas.getContext('2d', { alpha: false });
         
-        // CACHÉ DEL WATERMARK (La clave del performance)
         const watermarkCache = document.createElement('canvas');
         const cacheCtx = watermarkCache.getContext('2d', { alpha: true });
         
@@ -212,9 +212,9 @@
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
         
-        // Optimización: Limitar Pixel Ratio a máximo 2 (Ayuda a iPhones Pro Max)
         const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        // Max Pixel Ratio de 1.5 para salvar batería sin perder estética
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         renderer.domElement.id = 'webgl-canvas';
         renderContainer.appendChild(renderer.domElement);
 
@@ -233,20 +233,17 @@
 
             renderer.setSize(w, h, false); 
             
-            // Actualizar tamaños de canvas internos
             exportCanvas.width = w;
             exportCanvas.height = h;
             watermarkCache.width = w;
             watermarkCache.height = h;
 
             if(shaderMat) shaderMat.uniforms.u_resolution.value.set(w, h);
-            
-            // Re-hornear el texto al nuevo tamaño
             bakeWatermark();
         }
         window.addEventListener('resize', resize);
 
-        // FUNCIÓN QUE HORNEA EL TEXTO (Se llama solo cuando cambias tribu o rotas la pantalla)
+        // ARREGLO DE TEXTO: Dividido en dos líneas y escalado más pequeño
         function bakeWatermark() {
             if (watermarkCache.width === 0) return;
             
@@ -262,10 +259,14 @@
             cacheCtx.shadowOffsetY = baseSize * 0.1;
             cacheCtx.fillText("SANGRE " + currentTribeName, watermarkCache.width / 2, baseSize * 2.5);
 
-            let subSize = watermarkCache.width * 0.035;
+            // Subtitulo más pequeño y en dos líneas para evitar salirse de pantalla
+            let subSize = watermarkCache.width * 0.025; 
             cacheCtx.font = `bold ${subSize}px sans-serif`;
             cacheCtx.fillStyle = "rgba(255,255,255,0.9)";
-            cacheCtx.fillText("SGX JUSTAS CHALLENGE | Spatialgineers x Somos Mayagüez", watermarkCache.width / 2, baseSize * 2.5 + subSize * 1.5);
+            cacheCtx.shadowBlur = baseSize * 0.2; 
+            
+            cacheCtx.fillText("SGX JUSTAS CHALLENGE", watermarkCache.width / 2, baseSize * 2.5 + subSize * 1.8);
+            cacheCtx.fillText("Spatialgineers x Somos Mayagüez", watermarkCache.width / 2, baseSize * 2.5 + subSize * 3.2);
         }
 
         const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
@@ -299,23 +300,18 @@
                 vec3 tribalTint = mix(finalColor, finalColor * u_tint_color * 2.5, u_intensity);
                 finalColor = mix(tribalTint, finalColor, smoothstep(0.6, 1.0, luma));
 
+                // OPTIMIZACIÓN EXTREMA: "Diet Sobel" usando solo 4 samples diagonales
                 if (u_grid > 0.0) {
                     vec2 texel = 2.0 / u_resolution; 
                     
-                    float g00 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1.0, -1.0)).rgb);
-                    float g10 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 0.0, -1.0)).rgb);
-                    float g20 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 1.0, -1.0)).rgb);
-                    float g01 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1.0,  0.0)).rgb);
-                    float g21 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 1.0,  0.0)).rgb);
-                    float g02 = getLuma(texture2D(tDiffuse, uv + texel * vec2(-1.0,  1.0)).rgb);
-                    float g12 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 0.0,  1.0)).rgb);
-                    float g22 = getLuma(texture2D(tDiffuse, uv + texel * vec2( 1.0,  1.0)).rgb);
+                    float l1 = getLuma(texture2D(tDiffuse, uv + vec2(-texel.x, -texel.y)).rgb);
+                    float l2 = getLuma(texture2D(tDiffuse, uv + vec2( texel.x, -texel.y)).rgb);
+                    float l3 = getLuma(texture2D(tDiffuse, uv + vec2(-texel.x,  texel.y)).rgb);
+                    float l4 = getLuma(texture2D(tDiffuse, uv + vec2( texel.x,  texel.y)).rgb);
 
-                    float sx = g00 + 2.0 * g01 + g02 - (g20 + 2.0 * g21 + g22);
-                    float sy = g00 + 2.0 * g10 + g20 - (g02 + 2.0 * g12 + g22);
+                    float edge = sqrt(pow(l1 - l4, 2.0) + pow(l2 - l3, 2.0)) * 2.0;
                     
-                    float edge = sqrt(sx * sx + sy * sy);
-                    vec3 neonGlow = u_tint_color * edge * 4.0 * u_grid; 
+                    vec3 neonGlow = u_tint_color * edge * 3.5 * u_grid; 
                     finalColor += neonGlow;
                 }
                 gl_FragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
@@ -348,7 +344,6 @@
             if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); }
 
             try {
-                // OPTIMIZACIÓN: 1080p en lugar de 4K. Mantiene calidad sin derretir el GPU en tiempo real.
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: currentFacingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }, 
                     audio: { echoCancellation: true, noiseSuppression: true } 
@@ -368,7 +363,7 @@
                     
                     if (!isStreamActive) {
                         isStreamActive = true;
-                        drawFrame();
+                        requestAnimationFrame(drawFrame);
                     }
                     
                     resize();
@@ -392,17 +387,22 @@
         }
 
         let isRecording = false;
+        let lastRecordTime = 0;
 
-        function drawFrame() {
+        function drawFrame(timestamp) {
             if (!isStreamActive) return;
             requestAnimationFrame(drawFrame);
 
             renderer.render(scene, camera);
 
-            // OPTIMIZACIÓN DE GRABACIÓN: Ya no redibuja sombras y texto, solo pega la imagen cacheada.
+            // OPTIMIZACIÓN DE GRABACIÓN: Limitamos el compositing del canvas a 30 FPS (~33.3ms)
             if(isRecording) {
-                exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
-                exportCtx.drawImage(watermarkCache, 0, 0);
+                if (!timestamp) timestamp = performance.now();
+                if (timestamp - lastRecordTime >= 33.3) {
+                    exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
+                    exportCtx.drawImage(watermarkCache, 0, 0);
+                    lastRecordTime = timestamp;
+                }
             }
         }
 
@@ -424,7 +424,6 @@
             document.querySelectorAll('.tribe-btn').forEach(btn => btn.className = "tribe-btn");
             document.getElementById('btn-' + id.toLowerCase()).classList.add('active-' + id.toLowerCase());
 
-            // Actualizar la caché del texto para el video/foto
             bakeWatermark();
         }
 
@@ -436,11 +435,9 @@
         document.getElementById('sl-int').addEventListener('input', (e) => shaderMat.uniforms.u_intensity.value = parseFloat(e.target.value));
         document.getElementById('sl-scale').addEventListener('input', (e) => shaderMat.uniforms.u_grid.value = parseFloat(e.target.value));
 
-        // FOTO EXPORT
         document.getElementById('btn-photo').addEventListener('click', () => {
             renderer.render(scene, camera); 
             
-            // Estampar rápido
             exportCtx.drawImage(renderer.domElement, 0, 0, exportCanvas.width, exportCanvas.height);
             exportCtx.drawImage(watermarkCache, 0, 0);
             
@@ -457,7 +454,6 @@
             setTimeout(() => document.body.removeChild(flash), 350);
         });
 
-        // GRABACIÓN DE VIDEO
         let mediaRecorder;
         let recordedChunks = [];
         const btnRecord = document.getElementById('btn-record');
@@ -473,6 +469,8 @@
 
             recordedChunks = [];
             isRecording = true;
+            lastRecordTime = performance.now();
+            
             const visualStream = exportCanvas.captureStream(30);
             
             let combinedStream = visualStream;
@@ -494,7 +492,6 @@
                 }
             }
 
-            // Un bitrate moderado para que el celular no se asfixie procesando video
             mediaRecorder = new MediaRecorder(combinedStream, { mimeType: mimeType, videoBitsPerSecond: 5000000 });
             
             mediaRecorder.ondataavailable = (e) => { 
