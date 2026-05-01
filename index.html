@@ -72,7 +72,7 @@
             border-radius: 16px; padding: 20px; width: 100%; max-width: 350px;
             box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,143,57,0.2);
             display: flex; flex-direction: column; transition: border-color 0.3s, box-shadow 0.3s;
-            backdrop-filter: blur(10px); pointer-events: auto;
+            backdrop-filter: blur(10px); pointer-events: auto; position: relative;
         }
 
         .ui-layer { position: absolute; bottom: 0; z-index: 10; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; pointer-events: none; padding-bottom: 25px;}
@@ -128,6 +128,28 @@
 
         #rec-indicator { display: none; position: absolute; top: 25px; right: 25px; width: 10px; height: 10px; background: #ff0055; border-radius: 50%; box-shadow: 0 0 10px #ff0055; animation: pulse 1s infinite; z-index: 50; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* Estilo para el botón de colapsar */
+        #btn-toggle-menu {
+            position: absolute;
+            top: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 32px;
+            height: 32px;
+            background: #050505;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 0 10px rgba(0,0,0,0.8);
+            transition: color 0.3s, border-color 0.3s;
+        }
     </style>
 </head>
 <body>
@@ -156,25 +178,30 @@
 
     <div id="controls-ui" class="ui-layer px-4" style="display: none;">
         <div class="arcade-board mx-auto w-full">
-            <div class="tribe-grid">
-                <button class="tribe-btn" id="btn-uprm" onclick="swapTribe('UPRM', '#008f39')">UPRM</button>
-                <button class="tribe-btn" id="btn-inter" onclick="swapTribe('Inter', '#FDCC0D')">INTER</button>
-                <button class="tribe-btn" id="btn-iupi" onclick="swapTribe('Iupi', '#cc0000')">IUPI</button>
-                <button class="tribe-btn" id="btn-sagrado" onclick="swapTribe('Sagrado', '#ff007f')">SAGR</button>
-                <button class="tribe-btn" id="btn-uagm" onclick="swapTribe('UAGM', '#FF6600')">UAGM</button>
-                <button class="tribe-btn" id="btn-pucpr" onclick="swapTribe('PUCPR', '#0033A0')">PUCPR</button>
-                <button class="tribe-btn" id="btn-uprb" onclick="swapTribe('UPRB', '#00BFFF')">UPRB</button>
-                <button class="tribe-btn" id="btn-uprp" onclick="swapTribe('UPRP', '#8B0000')">UPRP</button>
-            </div>
+            
+            <button id="btn-toggle-menu">▼</button>
 
-            <div class="grid grid-cols-2 gap-6 pb-2 mb-2 px-2">
-                <div>
-                    <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-1 tracking-wider uppercase"><label>TINT</label></div>
-                    <input type="range" id="sl-int" min="0" max="1" step="0.05" value="0.8">
+            <div id="menu-content" style="display: block;">
+                <div class="tribe-grid">
+                    <button class="tribe-btn" id="btn-uprm" onclick="swapTribe('UPRM', '#008f39')">UPRM</button>
+                    <button class="tribe-btn" id="btn-inter" onclick="swapTribe('Inter', '#FDCC0D')">INTER</button>
+                    <button class="tribe-btn" id="btn-iupi" onclick="swapTribe('Iupi', '#cc0000')">IUPI</button>
+                    <button class="tribe-btn" id="btn-sagrado" onclick="swapTribe('Sagrado', '#ff007f')">SAGR</button>
+                    <button class="tribe-btn" id="btn-uagm" onclick="swapTribe('UAGM', '#FF6600')">UAGM</button>
+                    <button class="tribe-btn" id="btn-pucpr" onclick="swapTribe('PUCPR', '#0033A0')">PUCPR</button>
+                    <button class="tribe-btn" id="btn-uprb" onclick="swapTribe('UPRB', '#00BFFF')">UPRB</button>
+                    <button class="tribe-btn" id="btn-uprp" onclick="swapTribe('UPRP', '#8B0000')">UPRP</button>
                 </div>
-                <div>
-                    <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-1 tracking-wider uppercase"><label>NEON</label></div>
-                    <input type="range" id="sl-scale" min="0.1" max="2" step="0.1" value="1.0">
+
+                <div class="grid grid-cols-2 gap-6 pb-2 mb-2 px-2">
+                    <div>
+                        <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-1 tracking-wider uppercase"><label>TINT</label></div>
+                        <input type="range" id="sl-int" min="0" max="1" step="0.05" value="0.8">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] font-bold text-gray-400 mb-1 tracking-wider uppercase"><label>NEON</label></div>
+                        <input type="range" id="sl-scale" min="0.1" max="2" step="0.1" value="1.0">
+                    </div>
                 </div>
             </div>
 
@@ -209,6 +236,22 @@
             let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return result ? { r: parseInt(result[1], 16)/255, g: parseInt(result[2], 16)/255, b: parseInt(result[3], 16)/255 } : { r:1, g:1, b:1 };
         }
+
+        // --- Lógica del Menú Colapsable ---
+        const btnToggleMenu = document.getElementById('btn-toggle-menu');
+        const menuContent = document.getElementById('menu-content');
+        let isMenuVisible = true;
+
+        btnToggleMenu.addEventListener('click', () => {
+            isMenuVisible = !isMenuVisible;
+            if (isMenuVisible) {
+                menuContent.style.display = 'block';
+                btnToggleMenu.innerText = '▼';
+            } else {
+                menuContent.style.display = 'none';
+                btnToggleMenu.innerText = '▲';
+            }
+        });
 
         // --- 2. UBERSHADER SETUP ---
         const scene = new THREE.Scene();
@@ -303,9 +346,8 @@
 
         let currentStream = null;
 
-        // FIX ANTI-SPAM PARA EL BOTON
         document.getElementById('btn-init').addEventListener('click', (e) => {
-            e.target.disabled = true; // Evita el doble click mientras pide permiso
+            e.target.disabled = true; 
             e.target.innerText = "CONECTANDO...";
             startCamera(true); 
         });
@@ -325,7 +367,6 @@
                     audioStream = new MediaStream([stream.getAudioTracks()[0]]);
                 }
                 
-                // FIX DE RACE CONDITION: Asignamos el evento ANTES de conectar el stream
                 video.onloadedmetadata = () => {
                     texCanvas.width = video.videoWidth;
                     texCanvas.height = video.videoHeight;
@@ -350,7 +391,6 @@
                     }
                 };
 
-                // Ahora sí conectamos el stream y le damos play
                 video.srcObject = stream;
                 video.play().catch(e => console.warn("Autoplay bloqueado:", e));
                 
@@ -359,7 +399,7 @@
                 alert("Error al conectar la cámara. Verifica los permisos de tu navegador.");
                 const btn = document.getElementById('btn-init');
                 btn.innerText = "REINTENTAR";
-                btn.disabled = false; // Lo volvemos a encender si falló
+                btn.disabled = false; 
             }
         }
 
@@ -421,6 +461,10 @@
             const board = document.querySelector('.arcade-board');
             if(board) board.style.boxShadow = `0 0 30px rgba(0,0,0,0.8), inset 0 0 20px ${hexColor}33`; 
             
+            // Actualizar color del botón de colapsar para que matchee
+            btnToggleMenu.style.color = hexColor;
+            btnToggleMenu.style.borderColor = hexColor;
+
             const c = hexToRgb(hexColor);
             shaderMat.uniforms.u_tint_color.value.set(c.r, c.g, c.b);
 
